@@ -1,0 +1,32 @@
+version: '3'
+services:
+  api:
+    build:
+      context: ./xors-api
+    environment:
+      - RUST_LOG=debug
+      - XORS_API_DATABASE_URL=postgres://myuser:mypassword@db:5432/xors_api_db
+      - XORS_API_SECRET_KEY=0d3376b651a8da92fa79c6791962dd87f9d41057624cc33d259fb1c43db7f71e
+      - XORS_API_HOST=0.0.0.0
+      - XORS_API_PORT=8000
+    ports:
+      - 8000:8000
+    depends_on:
+      - db
+
+  # web:
+  #   build:
+  #     context: ./xors-web
+  #   environment:
+  #     - XORS_API_URL=api.example.com
+  #   ports:
+  #     - 8080:8080
+  #   depends_on:
+  #     - api
+
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: xors_api_db

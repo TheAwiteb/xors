@@ -1,0 +1,46 @@
+[package]
+authors = ["TheAwiteb <awiteb@hotmail.com>"]
+description = "A API for xors (XO game)"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+name = "xors-api"
+readme = "README.md"
+repository = "https://github.com/TheAwiteb/xors"
+rust-version = "1.70.0"
+version = "0.1.0"
+
+[workspace]
+members = [".", "entity", "migration"]
+
+
+[dependencies]
+entity = { path = "entity" }
+migration = { path = "migration" }
+sea-orm = { version = "0.12.10", features = [
+    "sqlx-postgres",
+    "runtime-tokio-native-tls",
+    "with-uuid",
+    "with-chrono",
+    "macros",
+] }
+chrono = "0.4.31"
+derive-new = "0.6.0"
+log = "0.4.20"
+pretty_env_logger = "0.5.0"
+salvo = {git = "https://github.com/salvo-rs/salvo.git", rev="1306fe8", features = [
+    "logging",
+    "affix",
+    "oapi",
+    "jwt-auth",
+    "rate-limiter",
+] }
+jsonwebtoken = "9.2.0"
+serde = {version = "1.0.195", features = ["derive"]}
+serde_json = "1.0.108"
+tokio = {version = "1.35.1", features = ["macros", "rt-multi-thread", "signal"]}
+uuid = {version = "1.6.1", features = ["v4"]}
+thiserror = "1.0.56"
+bcrypt = "0.15.0"
+passwords = { version = "3.1.16", features = ["common-password"] }
+captcha = "0.0.9"
+base64 = "0.21.6"
