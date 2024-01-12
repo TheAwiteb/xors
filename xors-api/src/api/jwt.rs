@@ -80,11 +80,12 @@ pub async fn captcha(depot: &mut Depot) -> ApiResult<Json<CaptchaSchema>> {
         )
     };
 
-    let captcha_token = db_utils::create_captcha(conn.as_ref(), captcha_answer).await?;
+    let captcha_model = db_utils::create_captcha(conn.as_ref(), captcha_answer).await?;
 
     Ok(Json(CaptchaSchema {
-        captcha_token,
+        captcha_token: captcha_model.uuid.unwrap(),
         captcha_image: format!("data:image/png;base64,{}", captcha_image?),
+        expired_at: captcha_model.expired_at.unwrap(),
     }))
 }
 
