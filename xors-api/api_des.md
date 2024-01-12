@@ -12,10 +12,10 @@ When you signup to XORS, you need to get the captcha from `/auth/captcha` it's r
 
 For each IP address, you can send **1500 requests** per minute to the XORS server. If you exceed this limit, you will receive a `429 Too Many Requests` error. For **unauthenticated** requests, the rate limit allows for up to **30 requests** per minute and it's enough for signup and signin to XORS.
 
-<!-- ##### Headers
-- `X-RateLimit-Limit`: The maximum number of requests that the consumer is permitted to make per second.
+##### Headers
+- `X-RateLimit-Limit`: The maximum number of requests that the consumer is permitted to make per minute.
 - `X-RateLimit-Remaining`: The number of requests remaining in the current rate limit window.
-- `X-RateLimit-Reset`: The time at which the current rate limit window resets in UTC epoch seconds. -->
+- `X-RateLimit-Reset`: The time at which the current rate limit window resets in UTC epoch seconds.
 
 
 #### JWT Token
