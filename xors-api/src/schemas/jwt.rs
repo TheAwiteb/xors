@@ -107,6 +107,8 @@ pub struct CaptchaSchema {
     pub captcha_token: Uuid,
     /// The captcha image. It's a base64 string.
     pub captcha_image: String,
+    /// The expiration date of the captcha token.
+    pub expired_at: chrono::NaiveDateTime,
 }
 
 impl Default for UserSchema {
@@ -178,6 +180,7 @@ impl Default for CaptchaSchema {
         Self {
             captcha_token: Uuid::new_v4(),
             captcha_image: "<CAPTCHA_IMAGE_BASE64>".to_owned(),
+            expired_at: chrono::Utc::now().naive_utc(),
         }
     }
 }

@@ -137,7 +137,10 @@ pub async fn get_user_by_username(
 }
 
 /// Creates a new captcha in the database with the given answer.
-pub async fn create_captcha(conn: &sea_orm::DatabaseConnection, answer: String) -> ApiResult<Uuid> {
+pub async fn create_captcha(
+    conn: &sea_orm::DatabaseConnection,
+    answer: String,
+) -> ApiResult<CaptchaActiveModel> {
     log::info!("Creating captcha");
 
     let uuid = loop {
@@ -152,14 +155,12 @@ pub async fn create_captcha(conn: &sea_orm::DatabaseConnection, answer: String) 
         }
     };
 
-    CaptchaActiveModel {
+    Ok(CaptchaActiveModel {
         uuid: Set(uuid),
         answer: Set(answer),
         expired_at: Set(chrono::Utc::now().naive_utc() + chrono::Duration::minutes(5)),
         ..Default::default()
     }
     .save(conn)
-    .await?;
-
-    Ok(uuid)
+    .await?)
 }
