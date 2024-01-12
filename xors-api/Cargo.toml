@@ -27,7 +27,8 @@ chrono = "0.4.31"
 derive-new = "0.6.0"
 log = "0.4.20"
 pretty_env_logger = "0.5.0"
-salvo = {git = "https://github.com/salvo-rs/salvo.git", rev="1306fe8", features = [
+# After `v0.65.0` is released, use `version = "0.65.0"` instead of `git`
+salvo = {git = "https://github.com/salvo-rs/salvo.git", rev="7042b7a", features = [
     "logging",
     "affix",
     "oapi",
