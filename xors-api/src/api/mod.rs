@@ -96,17 +96,19 @@ pub(crate) fn service(conn: sea_orm::DatabaseConnection, secret_key: String) -> 
             .force_passed(false);
 
     let unauth_limiter = RateLimiter::new(
-        FixedGuard::new(),
-        MokaStore::new(),
+        SlidingGuard::new(),
+        MokaStore::<String, SlidingGuard>::new(),
         RemoteIpIssuer,
-        BasicQuota::per_minute(30),
-    );
+        CelledQuota::per_minute(30, 1),
+    )
+    .add_headers(true);
     let auth_limiter = RateLimiter::new(
         FixedGuard::new(),
         MokaStore::new(),
         RemoteIpIssuer,
         BasicQuota::per_minute(1500),
-    );
+    )
+    .add_headers(true);
 
     let router = Router::new()
         .hoop(Logger::new())
