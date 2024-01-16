@@ -47,7 +47,7 @@ impl JwtClaims {
 
     /// Returns whether if the token is expired or not.
     pub fn is_expired(&self) -> bool {
-        self.exp < chrono::Utc::now().timestamp()
+        self.exp <= chrono::Utc::now().timestamp()
     }
 }
 
@@ -202,7 +202,7 @@ pub async fn refresh(depot: &mut Depot) -> ApiResult<Json<UserSigninSchema>> {
         .expect("The user is authorized so it should be here");
     if let Some(active_after) = refresh_token.claims.active_after {
         if !refresh_token.claims.is_expired() {
-            if active_after < chrono::Utc::now().timestamp() {
+            if active_after <= chrono::Utc::now().timestamp() {
                 db_utils::signin_user(
                     db_utils::get_user(conn.as_ref(), refresh_token.claims.uuid)
                         .await?
