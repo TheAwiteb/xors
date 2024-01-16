@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  # Pre run job
+  pre_run:
+    name: Pre run
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      is_rust: ${{ steps.filter.outputs.is_rust }}
+      is_rust_deps: ${{ steps.filter.outputs.is_rust_deps }}
+      is_react: ${{ steps.filter.outputs.is_react }}
+
+    steps:
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            is_rust:
+              - "xors-api/**/*.rs"
+            is_rust_deps:
+              - "xors-api/**/Cargo.toml"
+              - "xors-api/**/Cargo.lock"
+            is_react:
+              - "xors-web/**/*.js"
+              - "xors-web/**/*.jsx"
+              - "xors-web/**/*.ts"
+              - "xors-web/**/*.tsx"
+
+  # Rust jobs
+  rust_build:
+    needs: pre_run
+    if: needs.pre_run.outputs.is_rust == 'true'
+    name: Rust build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - run: |
+          cd xors-api
+          cargo build --workspace --all-features
+
+  rust_rustfmt:
+    needs: pre_run
+    if: needs.pre_run.outputs.is_rust == 'true'
+    name: Rust format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - run: |
+          cd xors-api
+          cargo fmt -- --check
+
+  rust_check:
+    needs: pre_run
+    if: needs.pre_run.outputs.is_rust == 'true'
+    name: Rust check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - run: |
+          cd xors-api
+          cargo check --workspace --all-features
+
+  rust_clippy:
+    needs: pre_run
+    if: needs.pre_run.outputs.is_rust == 'true'
+    name: Rust clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - run: |
+          cd xors-api
+          cargo clippy --workspace --all-features -- -D warnings
+
+  verify_msrv:
+    needs: pre_run
+    if: needs.pre_run.outputs.is_rust == 'true' || needs.pre_run.outputs.is_rust_deps == 'true'
+    name: Verify Minimum Supported Rust Version in Cargo.toml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install or use cached `cargo-msrv`
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: cargo-msrv
+      - name: Verify Minimum Rust Version
+        run: |
+          cd xors-api
+          cargo-msrv verify
+
+  rust_tests:
+    needs: pre_run
+    if: needs.pre_run.outputs.is_rust == 'true'
+    name: Rust tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: baptiste0928/cargo-install@v2
+        with:
+          crate: just
+      - uses: dtolnay/rust-toolchain@stable
+      - run: |
+          cd xors-api
+          just docker-tests
+
+  # JavaScript jobs
