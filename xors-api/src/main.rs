@@ -26,6 +26,9 @@ pub mod errors;
 pub mod schemas;
 pub mod utils;
 
+#[cfg(test)]
+mod tests;
+
 pub const BASE_64_ENGINE: GeneralPurpose = GeneralPurpose::new(
     &base64::alphabet::STANDARD,
     base64::engine::general_purpose::PAD,
