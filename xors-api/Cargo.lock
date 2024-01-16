@@ -955,27 +955,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dirs"
-version = "5.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44c45a9d03d6676652bcb5e724c7e988de1acad23a711b5217ab9cbecbec2225"
-dependencies = [
- "dirs-sys",
-]
-
-[[package]]
-name = "dirs-sys"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "520f05a5cbd335fae5a99ff7a6ab8627577660ee5cfd6a94a6a929b52ff0321c"
-dependencies = [
- "libc",
- "option-ext",
- "redox_users",
- "windows-sys 0.48.0",
-]
-
-[[package]]
 name = "dotenvy"
 version = "0.15.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1601,18 +1580,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "hyper-tls"
-version = "0.6.0"
+name = "hyper-rustls"
+version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70206fc6890eaca9fde8a0bf71caa2ddfc9fe045ac9e5c70df101a7dbde866e0"
+checksum = "a0bea761b46ae2b24eb4aef630d8d1c398157b6fc29e6350ecf090a0b70c952c"
 dependencies = [
- "bytes",
- "http-body-util",
+ "futures-util",
+ "http",
  "hyper",
  "hyper-util",
- "native-tls",
+ "log",
+ "rustls",
+ "rustls-native-certs",
+ "rustls-pki-types",
  "tokio",
- "tokio-native-tls",
+ "tokio-rustls",
  "tower-service",
 ]
 
@@ -1828,17 +1810,6 @@ name = "libm"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ec2a862134d2a7d32d7983ddcdd1c4923530833c9f2ea1a44fc5fa473989058"
-
-[[package]]
-name = "libredox"
-version = "0.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85c833ca1e66078851dba29046874e38f08b2c883700aa29a03ddd3b23814ee8"
-dependencies = [
- "bitflags 2.4.1",
- "libc",
- "redox_syscall",
-]
 
 [[package]]
 name = "libsqlite3-sys"
@@ -2205,12 +2176,6 @@ dependencies = [
  "pkg-config",
  "vcpkg",
 ]
-
-[[package]]
-name = "option-ext"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 
 [[package]]
 name = "ordered-float"
@@ -2651,17 +2616,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "redox_users"
-version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a18479200779601e498ada4e8c1e1f50e3ee19deb0259c25825a98b5603b2cb4"
-dependencies = [
- "getrandom",
- "libredox",
- "thiserror",
-]
-
-[[package]]
 name = "regex"
 version = "1.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2806,7 +2760,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "rust-embed-utils",
- "shellexpand",
  "syn 2.0.48",
  "walkdir",
 ]
@@ -2880,6 +2833,60 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustls"
+version = "0.22.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e87c9956bd9807afa1f77e0f7594af32566e830e088a5576d27c5b6f30f49d41"
+dependencies = [
+ "log",
+ "ring",
+ "rustls-pki-types",
+ "rustls-webpki",
+ "subtle",
+ "zeroize",
+]
+
+[[package]]
+name = "rustls-native-certs"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f1fb85efa936c42c6d5fc28d2629bb51e4b2f4b8a5211e297d599cc5a093792"
+dependencies = [
+ "openssl-probe",
+ "rustls-pemfile",
+ "rustls-pki-types",
+ "schannel",
+ "security-framework",
+]
+
+[[package]]
+name = "rustls-pemfile"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "35e4980fa29e4c4b212ffb3db068a564cbf560e51d3944b7c88bd8bf5bec64f4"
+dependencies = [
+ "base64 0.21.6",
+ "rustls-pki-types",
+]
+
+[[package]]
+name = "rustls-pki-types"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9e9d979b3ce68192e42760c7810125eb6cf2ea10efae545a156063e61f314e2a"
+
+[[package]]
+name = "rustls-webpki"
+version = "0.102.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef4ca26037c909dedb327b48c3327d0ba91d3dd3c4e05dad328f210ffb68e95b"
+dependencies = [
+ "ring",
+ "rustls-pki-types",
+ "untrusted",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2887,8 +2894,9 @@ checksum = "f98d2aa92eebf49b69786be48e4477826b256916e84a57ff2a4f21923b48eb4c"
 
 [[package]]
 name = "salvo"
-version = "0.64.0"
-source = "git+https://github.com/salvo-rs/salvo.git?rev=7042b7a#7042b7ac9b55de04da10e6ba2921f13ebb2b9329"
+version = "0.64.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2dbb916b1b61dd88f0b0a1c8095157d4d82d6271f39fc3dfaa72e97a99717f05"
 dependencies = [
  "salvo-jwt-auth",
  "salvo-oapi",
@@ -2899,13 +2907,14 @@ dependencies = [
 
 [[package]]
 name = "salvo-jwt-auth"
-version = "0.64.0"
-source = "git+https://github.com/salvo-rs/salvo.git?rev=7042b7a#7042b7ac9b55de04da10e6ba2921f13ebb2b9329"
+version = "0.64.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64fcf073a2f38977e66824ab91f845b06bb293236d22aa85f6f0d816e7bfdf1b"
 dependencies = [
  "base64 0.21.6",
  "bytes",
  "http-body-util",
- "hyper-tls",
+ "hyper-rustls",
  "hyper-util",
  "jsonwebtoken",
  "salvo_core",
@@ -2918,8 +2927,9 @@ dependencies = [
 
 [[package]]
 name = "salvo-oapi"
-version = "0.64.0"
-source = "git+https://github.com/salvo-rs/salvo.git?rev=7042b7a#7042b7ac9b55de04da10e6ba2921f13ebb2b9329"
+version = "0.64.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "102257ffb3e48588c80b02560e2084ba01dc56b5f2683857d211e2825ec03e8b"
 dependencies = [
  "base64 0.21.6",
  "bytes",
@@ -2950,8 +2960,9 @@ dependencies = [
 
 [[package]]
 name = "salvo-oapi-macros"
-version = "0.64.0"
-source = "git+https://github.com/salvo-rs/salvo.git?rev=7042b7a#7042b7ac9b55de04da10e6ba2921f13ebb2b9329"
+version = "0.64.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ddd7bfd9dadd0e001e541982ea98718086ace3c1dd3f8803eb49df53da90277"
 dependencies = [
  "proc-macro-crate",
  "proc-macro-error",
@@ -2964,8 +2975,9 @@ dependencies = [
 
 [[package]]
 name = "salvo-rate-limiter"
-version = "0.64.0"
-source = "git+https://github.com/salvo-rs/salvo.git?rev=7042b7a#7042b7ac9b55de04da10e6ba2921f13ebb2b9329"
+version = "0.64.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22f39a5c65c4a7f7f5045a32951589400a9dd88d6eaf8a2a8e60d473aec65104"
 dependencies = [
  "moka",
  "salvo_core",
@@ -2977,8 +2989,9 @@ dependencies = [
 
 [[package]]
 name = "salvo-serde-util"
-version = "0.64.0"
-source = "git+https://github.com/salvo-rs/salvo.git?rev=7042b7a#7042b7ac9b55de04da10e6ba2921f13ebb2b9329"
+version = "0.64.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c516c6404d5a2e4732b8bf94985d595e4cfa26e961a8608198cb03f13a2ff81"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -2988,8 +3001,9 @@ dependencies = [
 
 [[package]]
 name = "salvo_core"
-version = "0.64.0"
-source = "git+https://github.com/salvo-rs/salvo.git?rev=7042b7a#7042b7ac9b55de04da10e6ba2921f13ebb2b9329"
+version = "0.64.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a6711b086cd217cae1d52c872f8b0d9acd03e9d2dccb45998062538c7f20dcb7"
 dependencies = [
  "async-trait",
  "base64 0.21.6",
@@ -3036,8 +3050,9 @@ dependencies = [
 
 [[package]]
 name = "salvo_extra"
-version = "0.64.0"
-source = "git+https://github.com/salvo-rs/salvo.git?rev=7042b7a#7042b7ac9b55de04da10e6ba2921f13ebb2b9329"
+version = "0.64.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd825e820ea5a7792b465f7dcb99e87727ad0e7f00a4ef0f74476deaca9e6e18"
 dependencies = [
  "base64 0.21.6",
  "etag",
@@ -3055,8 +3070,9 @@ dependencies = [
 
 [[package]]
 name = "salvo_macros"
-version = "0.64.0"
-source = "git+https://github.com/salvo-rs/salvo.git?rev=7042b7a#7042b7ac9b55de04da10e6ba2921f13ebb2b9329"
+version = "0.64.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bfe0e94ef1090f4f712d2c6349db0d92e9cb8118619244edda4774625f48b807"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -3384,15 +3400,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
 dependencies = [
  "lazy_static",
-]
-
-[[package]]
-name = "shellexpand"
-version = "3.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da03fa3b94cc19e3ebfc88c4229c49d8f08cdbd1228870a45f0ffdf84988e14b"
-dependencies = [
- "dirs",
 ]
 
 [[package]]
@@ -3960,12 +3967,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "tokio-native-tls"
-version = "0.3.1"
+name = "tokio-rustls"
+version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbae76ab933c85776efabc971569dd6119c580d8f5d448769dec1764bf796ef2"
+checksum = "775e0c0f0adb3a2f22a00c4745d728b479985fc15ee7ca6a2608388c5569860f"
 dependencies = [
- "native-tls",
+ "rustls",
+ "rustls-pki-types",
  "tokio",
 ]
 
@@ -4573,6 +4581,7 @@ checksum = "0fcb9cbac069e033553e8bb871be2fbdffcab578eb25bd0f7c508cedc6dcd75a"
 name = "xors-api"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "base64 0.21.6",
  "bcrypt",
  "captcha",

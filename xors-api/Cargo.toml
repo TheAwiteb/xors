@@ -6,7 +6,7 @@ license = "AGPL-3.0-or-later"
 name = "xors-api"
 readme = "README.md"
 repository = "https://github.com/TheAwiteb/xors"
-rust-version = "1.70.0"
+rust-version = "1.75.0"
 version = "0.1.0"
 
 [workspace]
@@ -27,8 +27,7 @@ chrono = "0.4.31"
 derive-new = "0.6.0"
 log = "0.4.20"
 pretty_env_logger = "0.5.0"
-# After `v0.65.0` is released, use `version = "0.65.0"` instead of `git`
-salvo = {git = "https://github.com/salvo-rs/salvo.git", rev="7042b7a", features = [
+salvo = { version = "0.64.2", features = [
     "logging",
     "affix",
     "oapi",
@@ -45,3 +44,4 @@ bcrypt = "0.15.0"
 passwords = { version = "3.1.16", features = ["common-password"] }
 captcha = "0.0.9"
 base64 = "0.21.6"
+async-trait = "0.1.77"
