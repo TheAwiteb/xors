@@ -7,7 +7,7 @@ EXPOSE 8000
 COPY Cargo.toml Cargo.lock ./
 
 COPY src ./src
-COPY openapi_doc.md openapi_doc.md
+COPY api_des.md api_des.md
 COPY entity ./entity
 COPY migration ./migration
 
