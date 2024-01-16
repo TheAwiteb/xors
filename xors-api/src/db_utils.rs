@@ -76,25 +76,36 @@ pub async fn create_user(
 /// Signin a user and returns a JWT token with a refresh token.
 pub async fn signin_user(user: UserSchema, secret_key: &str) -> ApiResult<UserSigninSchema> {
     log::info!("Logging in user: {}", user.username);
+    let now = chrono::Utc::now().naive_utc();
+    let jwt_exp = if matches!(std::env::var("XORS_API_TEST"), Ok(status) if status == "true") {
+        (now + chrono::Duration::seconds(2)).timestamp()
+    } else {
+        (now + chrono::Duration::hours(1)).timestamp()
+    };
+
+    let refresh_exp = if matches!(std::env::var("XORS_API_TEST"), Ok(status) if status == "true") {
+        (now + chrono::Duration::seconds(5)).timestamp()
+    } else {
+        (now + chrono::Duration::hours(3)).timestamp()
+    };
+
+    let refresh_active_after = if matches!(std::env::var("XORS_API_TEST"), Ok(status) if status == "true")
+    {
+        Some((now + chrono::Duration::seconds(3)).timestamp())
+    } else {
+        Some((now + chrono::Duration::minutes(58)).timestamp())
+    };
 
     let jwt = jsonwebtoken::encode(
         &Header::default(),
-        &JwtClaims::new(
-            user.uuid,
-            None,
-            (chrono::Utc::now().naive_utc() + chrono::Duration::hours(1)).timestamp(),
-        ),
+        &JwtClaims::new(user.uuid, None, jwt_exp),
         &jsonwebtoken::EncodingKey::from_secret(secret_key.as_bytes()),
     )
     .expect("JWT encode failed");
 
     let refresh_token = jsonwebtoken::encode(
         &Header::default(),
-        &JwtClaims::new(
-            user.uuid,
-            Some((chrono::Utc::now().naive_utc() + chrono::Duration::minutes(58)).timestamp()),
-            (chrono::Utc::now().naive_utc() + chrono::Duration::hours(3)).timestamp(),
-        ),
+        &JwtClaims::new(user.uuid, refresh_active_after, refresh_exp),
         &jsonwebtoken::EncodingKey::from_secret(secret_key.as_bytes()),
     )
     .expect("JWT encode failed");
