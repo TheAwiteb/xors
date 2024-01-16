@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// The user's schema. It's used to return the user's data.
-#[derive(Serialize, Deserialize, Clone, Debug, ToSchema)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Debug, ToSchema)]
 #[salvo(schema(symbol = "UserSchema", example = json!(UserSchema::default())))]
 pub struct UserSchema {
     /// The user's uuid. It's unique.
@@ -86,7 +86,7 @@ pub struct SigninSchema {
 }
 
 /// The user's signin schema. It's used to return the user's data and the JWT token.
-#[derive(Serialize, Deserialize, Clone, Debug, ToSchema)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Debug, ToSchema)]
 #[salvo(schema(symbol = "UserSigninSchema", example = json!(UserSigninSchema::default())))]
 pub struct UserSigninSchema {
     #[serde(flatten)]
@@ -182,5 +182,13 @@ impl Default for CaptchaSchema {
             captcha_image: "<CAPTCHA_IMAGE_BASE64>".to_owned(),
             expired_at: chrono::Utc::now().naive_utc(),
         }
+    }
+}
+
+impl PartialEq<NewUserSchema> for UserSchema {
+    fn eq(&self, other: &NewUserSchema) -> bool {
+        self.first_name == other.first_name
+            && self.last_name == other.last_name
+            && self.username == other.username
     }
 }
