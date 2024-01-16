@@ -87,7 +87,7 @@ async fn add_server_headers(res: &mut Response) {
     headers.insert("X-Powered-By", HeaderValue::from_static("Rust/Salvo"));
 }
 
-pub(crate) fn service(conn: sea_orm::DatabaseConnection, secret_key: String) -> Service {
+pub fn service(conn: sea_orm::DatabaseConnection, secret_key: String) -> Service {
     let auth_handler: JwtAuth<jwt::JwtClaims, _> =
         JwtAuth::new(ConstDecoder::from_secret(secret_key.as_bytes()))
             .finders(vec![Box::new(
@@ -122,7 +122,7 @@ pub(crate) fn service(conn: sea_orm::DatabaseConnection, secret_key: String) -> 
                     Router::with_path("auth")
                         .push(Router::with_path("signup").post(jwt::signup))
                         .push(Router::with_path("signin").post(jwt::signin))
-                        .push(Router::with_path("captcha").post(jwt::captcha)),
+                        .push(Router::with_path("captcha").get(jwt::captcha)),
                 ),
         )
         // Authorized routes
