@@ -16,6 +16,8 @@ docker-compose up
 ## API
 After running the server, you can access the API documentation at `http://0.0.0.0:8000/api-doc/swagger-ui/`
 
+More information about the API can be found at [xors-api/README.md](xors-api/README.md)
+
 ## License
 This project is licensed under the AGPL-3.0 License - see the [LICENSE](LICENSE) file for details
 
