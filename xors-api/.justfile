@@ -11,50 +11,37 @@ JUST_EXECUTABLE := "just -u -f " + justfile()
 header := "Available tasks:\n"
 # Get the MSRV from the Cargo.toml
 msrv := `cat Cargo.toml | grep "rust-version" | sed 's/.*"\(.*\)".*/\1/'`
-# Docker exec
-de := "docker-compose exec -T api"
 
 
 _default:
     @{{JUST_EXECUTABLE}} --list-heading "{{header}}" --list
 
+# Run the API
+run:
+    RUST_LOG=debug cargo dotenv -e .env.dev -- run
+
 # Run the CI (Local use only)
-ci:
-    cargo +stable build -q
-    cargo +stable fmt -- --all --check
-    cargo +stable clippy -- -D warnings --no-deps
+@ci:
+    cargo +stable dotenv -e .env.dev -- build -q
+    cargo +stable dotenv -e .env.dev -- fmt -- --check
+    cargo +stable dotenv -e .env.dev -- clippy -- -D warnings --no-deps
     {{JUST_EXECUTABLE}} msrv
-    {{JUST_EXECUTABLE}} docker-tests
+    {{JUST_EXECUTABLE}} tests
 
 # Check that the current MSRV is correct
 msrv:
     @rustup toolchain install {{msrv}}
     echo "Checking MSRV ({{msrv}})"
-    cargo +{{msrv}} build -q
+    cargo +{{msrv}} dotenv -e .env.dev -- build -q
     echo "MSRV is correct"
 
-# Rebuild the API docker image and run it
-docker-dev:
-    cargo +stable build -r -q
-    docker-compose rm -f -s api
-    docker compose up
+# Run the tests
+@tests:
+    docker-compose rm -f -s db
+    docker-compose up -d db
+    sleep 2
+    cargo dotenv -e .env.dev -- run --manifest-path ./migration/Cargo.toml -- up -u postgres://myuser:mypassword@localhost:8246/xors_api_db
 
-# Rebuild the API docker image and the database docker image and run them
-fdocker-dev: && docker-dev
-    docker rm -f $(docker ps -a -f NAME=xors-db-1 -q)
+    cargo dotenv -e .env.dev -- test 
 
-# Run the tests in a docker container
-docker-tests:
-    docker compose up -d
-
-    {{de}} cargo test 
-
-    @{{JUST_EXECUTABLE}} docker-clean
-
-# Clean docker images (Panics if the images are not present)
-docker-clean:
-    @docker-compose rm -f -s api db
-
-alias d := docker-dev
-alias fd := fdocker-dev
-
+    docker-compose rm -f -s db
