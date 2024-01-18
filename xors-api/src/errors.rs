@@ -33,6 +33,8 @@ pub enum ApiError {
     UsernameAlreadyExists(String),
     #[error("The token is not a refresh token")]
     NotRefreshToken,
+    #[error("The token is not user jwt")]
+    NotUserJwt,
     #[error("The refresh token is not active yet")]
     UnActiveRefreshToken,
     #[error("The token is expired")]
@@ -53,6 +55,8 @@ pub enum ApiError {
     InvalidCaptchaToken,
     #[error("The captcha answer is incorrect")]
     InvalidCaptchaAnswer,
+    #[error("No changes were made")]
+    NoChanges,
 
     #[error("Internal server error")]
     InternalServer,
@@ -98,6 +102,8 @@ impl Scribe for ApiError {
             }
             ApiError::UsernameAlreadyExists(_)
             | ApiError::NotRefreshToken
+            | ApiError::NotUserJwt
+            | ApiError::NoChanges
             | ApiError::InvalidFirstName
             | ApiError::InvalidLastName
             | ApiError::InvalidUsername
