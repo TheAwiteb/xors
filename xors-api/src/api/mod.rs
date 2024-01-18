@@ -18,13 +18,16 @@ use std::sync::Arc;
 
 use salvo::http::ResBody;
 use salvo::jwt_auth::{ConstDecoder, HeaderFinder};
-use salvo::oapi::{Info, License};
+use salvo::oapi::security::{Http, HttpAuthScheme};
+use salvo::oapi::{Info, License, SecurityScheme};
 use salvo::rate_limiter::*;
 use salvo::{catcher::Catcher, http::HeaderValue, hyper::header, logging::Logger, prelude::*};
 
 use crate::schemas::MessageSchema;
 
+pub mod impls;
 pub mod jwt;
+pub mod user;
 
 pub fn write_json_body(res: &mut Response, json_body: impl serde::Serialize) {
     res.write_body(serde_json::to_string(&json_body).unwrap())
@@ -123,7 +126,8 @@ pub fn service(conn: sea_orm::DatabaseConnection, secret_key: String) -> Service
                         .push(Router::with_path("signup").post(jwt::signup))
                         .push(Router::with_path("signin").post(jwt::signin))
                         .push(Router::with_path("captcha").get(jwt::captcha)),
-                ),
+                )
+                .push(Router::with_path("user").get(user::get_user_info)),
         )
         // Authorized routes
         .push(
@@ -133,6 +137,12 @@ pub fn service(conn: sea_orm::DatabaseConnection, secret_key: String) -> Service
                 .hoop(add_server_headers)
                 .push(
                     Router::with_path("auth").push(Router::with_path("refresh").get(jwt::refresh)),
+                )
+                .push(
+                    Router::with_path("user")
+                        .put(user::update_user)
+                        .delete(user::delete_user)
+                        .push(Router::with_path("me").get(user::get_me)),
                 ),
         );
 
@@ -144,6 +154,16 @@ pub fn service(conn: sea_orm::DatabaseConnection, secret_key: String) -> Service
                     License::new("AGPL-3.0-or-later")
                         .url("https://www.gnu.org/licenses/agpl-3.0.en.html"),
                 ),
+        )
+        .add_security_scheme(
+            "bearerAuth",
+            SecurityScheme::Http(
+                Http::new(HttpAuthScheme::Bearer)
+                    .bearer_format("JWT")
+                    .description(
+                        "The JWT token of the user. Get it from the `/auth/signin` endpoint.",
+                    ),
+            ),
         )
         .merge_router(&router);
 
