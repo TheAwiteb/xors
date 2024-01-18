@@ -66,8 +66,39 @@ docker-compose start api
 ## API
 After running the server, you can access the API documentation at `http://0.0.0.0:8000/api-doc/swagger-ui/`
 
+### Development
+For development, you need to have this requirements:
+- [cargo (Rust)](https://doc.rust-lang.org/cargo/getting-started/installation.html)
+- [just](https://crates.io/crates/just)
+- [cargo-dotenv](https://crates.io/crates/cargo-dotenv)
+- [docker-compose](https://docs.docker.com/engine/install/)
+
+#### Run the database
+For the database, we will run it in a docker container, you can run it using the following command:
+```bash
+docker-compose up -d db
+```
+
+#### Run the API
+To run the API, you need to run the following command:
+```bash
+just run
+```
+
+#### Run the CI
+To run the CI, you need to run the following command:
+```bash
+just ci
+```
+
+#### Close the database
+To close the database, you need to run the following command:
+```bash
+docker-compose stop db
+```
+
 ### Flowchart
-You can find the flowchart of the API at `flowchart.mermaid` file. And this is how it looks like:
+You can find the flowchart of the API at [`flowchart.mermaid`](./flowchart.mermaid) file. And this is how it looks like:
 
 ```mermaid
 ---
