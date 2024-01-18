@@ -826,7 +826,7 @@ mod refresh {
         let mut res = send(
             &service,
             "auth/refresh",
-            Method::POST,
+            Method::GET,
             None::<&str>,
             vec![(
                 header::AUTHORIZATION,
@@ -896,7 +896,7 @@ mod refresh {
         let res = send(
             &service,
             "auth/refresh",
-            Method::POST,
+            Method::GET,
             None::<&str>,
             vec![(
                 header::AUTHORIZATION,
@@ -947,7 +947,7 @@ mod refresh {
         let res = send(
             &service,
             "auth/refresh",
-            Method::POST,
+            Method::GET,
             None::<&str>,
             vec![(
                 header::AUTHORIZATION,
@@ -974,7 +974,7 @@ mod refresh {
         let res = send(
             &service,
             "auth/refresh",
-            Method::POST,
+            Method::GET,
             None::<&str>,
             vec![(
                 header::AUTHORIZATION,
@@ -998,7 +998,7 @@ mod refresh {
 
         let service = get_service().await.expect("Failed to get service");
 
-        let res = send(&service, "auth/refresh", Method::POST, None::<&str>, vec![]).await;
+        let res = send(&service, "auth/refresh", Method::GET, None::<&str>, vec![]).await;
 
         assert_eq!(
             res.status_code,
@@ -1017,7 +1017,7 @@ mod refresh {
         let res = send(
             &service,
             "auth/refresh",
-            Method::POST,
+            Method::GET,
             None::<&str>,
             vec![(
                 header::AUTHORIZATION,
@@ -1068,7 +1068,7 @@ mod refresh {
         let res = send(
             &service,
             "auth/refresh",
-            Method::POST,
+            Method::GET,
             None::<&str>,
             vec![(
                 header::AUTHORIZATION,
