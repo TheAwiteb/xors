@@ -30,3 +30,6 @@ services:
       POSTGRES_USER: myuser
       POSTGRES_PASSWORD: mypassword
       POSTGRES_DB: xors_api_db
+    # This for devlopment only
+    ports:
+      - 8246:5432
