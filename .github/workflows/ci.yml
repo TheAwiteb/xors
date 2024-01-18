@@ -107,6 +107,9 @@ jobs:
       - uses: baptiste0928/cargo-install@v2
         with:
           crate: just
+      - uses: baptiste0928/cargo-install@v2
+        with:
+          crate: cargo-dotenv
       - uses: dtolnay/rust-toolchain@stable
       - run: |
           cd xors-api
