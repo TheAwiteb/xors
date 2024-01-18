@@ -25,12 +25,16 @@ use crate::{
 
 /// Validates a user name. not the user signin, but the first name and last name.
 #[must_use = "This function returns a `ApiResult<()>` instead of panicking"]
-pub fn validate_user_name(name: &str) -> ApiResult<()> {
+pub fn validate_user_name<const IS_FIRST_NAME: bool>(name: &str) -> ApiResult<()> {
     if name.chars().count() > 32
         || name.chars().count() == 0
         || name.chars().any(|c: char| c.is_whitespace())
     {
-        return Err(ApiError::InvalidFirstName);
+        if IS_FIRST_NAME {
+            return Err(ApiError::InvalidFirstName);
+        } else {
+            return Err(ApiError::InvalidLastName);
+        }
     }
     Ok(())
 }
@@ -118,10 +122,10 @@ pub fn validate_user_signin(usersignin: &str) -> ApiResult<()> {
 /// - The user's password.
 #[must_use = "This function returns a `ApiResult<()>` instead of panicking"]
 pub fn validate_user_registration(user: &NewUserSchema) -> ApiResult<()> {
-    validate_user_name(&user.first_name)?;
+    validate_user_name::<true>(&user.first_name)?;
     user.last_name
         .as_deref()
-        .map(validate_user_name)
+        .map(validate_user_name::<false>)
         .transpose()?;
     validate_password(&user.password)?;
     validate_user_signin(&user.username)?;
