@@ -132,7 +132,7 @@ pub fn service(conn: sea_orm::DatabaseConnection, secret_key: String) -> Service
                 .hoop(auth_handler)
                 .hoop(add_server_headers)
                 .push(
-                    Router::with_path("auth").push(Router::with_path("refresh").post(jwt::refresh)),
+                    Router::with_path("auth").push(Router::with_path("refresh").get(jwt::refresh)),
                 ),
         );
 
