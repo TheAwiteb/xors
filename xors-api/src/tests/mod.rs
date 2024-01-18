@@ -20,10 +20,6 @@ use salvo::{
 use serde::Serialize;
 use uuid::Uuid;
 
-const GET: Method = Method::GET;
-// const POST: Method = Method::POST;
-// const PUT: Method = Method::PUT;
-// const DELETE: Method = Method::DELETE;
 const API_URL: &str = "http://127.0.0.1:5801";
 
 /// Function to send a request to the API.
