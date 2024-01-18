@@ -18,8 +18,9 @@ use salvo::oapi::ToSchema;
 use serde::{Deserialize, Serialize};
 
 mod jwt;
+mod user;
 
-pub use jwt::*;
+pub use {jwt::*, user::*};
 
 #[derive(Serialize, Deserialize, Clone, Debug, ToSchema, derive_new::new)]
 #[salvo(schema(symbol = "MessageSchema", example = json!(MessageSchema::new("Message".to_owned()))))]
