@@ -15,6 +15,3 @@ RUN cargo build --release
 
 CMD ["cargo", "run", "--release"]
 
-# FOR dev
-# COPY target/release/xors-api ./api
-# CMD ["./api"]
