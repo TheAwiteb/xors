@@ -163,7 +163,7 @@ pub async fn update_user(
 
         if let Some(first_name) = updated_user.first_name {
             if &first_name != user.first_name.as_ref() {
-                utils::validate_user_name(&first_name)?;
+                utils::validate_user_name::<true>(&first_name)?;
                 user.first_name = Set(first_name);
             }
         } else {
@@ -174,7 +174,7 @@ pub async fn update_user(
             updated_user
                 .last_name
                 .as_deref()
-                .map(utils::validate_user_name)
+                .map(utils::validate_user_name::<false>)
                 .transpose()?;
             user.last_name = Set(updated_user.last_name);
         }
