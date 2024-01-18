@@ -100,17 +100,13 @@ docker-compose stop db
 ### Flowchart
 You can find the flowchart of the API at [`flowchart.mermaid`](./flowchart.mermaid) file. And this is how it looks like:
 
+#### Auth
 ```mermaid
----
-title: Xors API
----
-
 flowchart TB
     start([Start])
 
     %% Start the auth endpoints
     start --> /auth
-    start --> /user
 
     %% The auth endpoints
     subgraph /auth
@@ -171,8 +167,16 @@ flowchart TB
             refresh_Q4 -- "No" --> refresh_T5(["Send 403\nerror"]) --> refresh_END
         end
     end
+```
 
-    %% The user endpoints
+#### Users
+```mermaid
+flowchart TB
+    start([Start])
+
+    %% Start the auth endpoints
+    start --> /user
+
     subgraph /user
         user_start -- GET --> me
         user_start -- GET --> get_user
@@ -205,7 +209,7 @@ flowchart TB
             get_user_Q3 -- "No" --> get_user_T3(["Send 400\nerror"]) --> get_user_END
 
             get_user_Q4 -- "Yes" --> get_user_T4(["Send the\nuser data"]) -- 200 --> get_user_END
-            get_user_Q4 -- "No" --> get_user_T5(["Send 400\nerror"]) --> get_user_END
+            get_user_Q4 -- "No" --> get_user_T5(["Send 404\nerror"]) --> get_user_END
         end
 
         subgraph delete_user
@@ -215,7 +219,7 @@ flowchart TB
             delete_user_Q1 -- "Yes" --> delete_user_Q2{"Is valid\nBearer JWT token?"}
             delete_user_Q1 -- "No" --> delete_user_T1(["Send 403\nerror"]) --> delete_user_END
 
-            delete_user_Q2 -- "Yes" --> delete_user_Q3{"Is delete schema\nentered correctly?\nusername,password"}
+            delete_user_Q2 -- "Yes" --> delete_user_Q3{"Is delete schema\nentered correctly?\password"}
             delete_user_Q2 -- "No" --> delete_user_T2(["Send 403\nerror"]) --> delete_user_END
 
             delete_user_Q3 -- "Yes" --> delete_user_Q4{"Do the username and\npassword valid?"}

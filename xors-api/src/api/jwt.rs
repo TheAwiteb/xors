@@ -28,15 +28,17 @@ use salvo::{oapi::extract::JsonBody, prelude::*};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use super::impls::UserExt;
+
 #[derive(Debug, Serialize, Deserialize, derive_new::new)]
 pub struct JwtClaims {
     /// The user's uuid.
-    uuid: Uuid,
+    pub uuid: Uuid,
     /// The refresh token activate date.
     #[serde(skip_serializing_if = "Option::is_none")]
-    active_after: Option<i64>,
+    pub active_after: Option<i64>,
     /// The token's expiration date.
-    exp: i64,
+    pub exp: i64,
 }
 
 impl JwtClaims {
@@ -190,21 +192,20 @@ pub async fn signin(
         (status_code = 404, description = "User not found", content_type = "application/json", body = MessageSchema),
         (status_code = 500, description = "Internal server error", content_type = "application/json", body = MessageSchema),
         (status_code = 429, description = "Too many requests", content_type = "application/json", body = MessageSchema),
-    )
+    ),
+    security(("bearerAuth" = [])),
 )]
 pub async fn refresh(depot: &mut Depot) -> ApiResult<Json<UserSigninSchema>> {
     let conn = depot.obtain::<Arc<sea_orm::DatabaseConnection>>().unwrap();
     let secret_key = depot.get::<Arc<String>>("secret_key").unwrap();
 
     // Note: The `Unauthorized` and `Forbidden` errors are handled by the `JwtAuth` middleware.
-    let refresh_token = depot
-        .jwt_auth_data::<JwtClaims>()
-        .expect("The user is authorized so it should be here");
-    if let Some(active_after) = refresh_token.claims.active_after {
-        if !refresh_token.claims.is_expired() {
+    let refresh_token = depot.jwt_claims();
+    if let Some(active_after) = refresh_token.active_after {
+        if !refresh_token.is_expired() {
             if active_after <= chrono::Utc::now().timestamp() {
                 db_utils::signin_user(
-                    db_utils::get_user(conn.as_ref(), refresh_token.claims.uuid)
+                    db_utils::get_user(conn.as_ref(), refresh_token.uuid)
                         .await?
                         .into(),
                     secret_key,

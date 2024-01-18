@@ -8,7 +8,7 @@ mod captcha {
     async fn test_headers() {
         let service = get_service().await.expect("Failed to get service");
 
-        let res = send(&service, "auth/captcha", GET, None::<&str>, vec![]).await;
+        let res = send(&service, "auth/captcha", Method::GET, None::<&str>, vec![]).await;
         assert_eq!(
             res.status_code,
             Some(StatusCode::OK),
@@ -30,7 +30,7 @@ mod captcha {
     async fn test_body() {
         let service = get_service().await.expect("Failed to get service");
 
-        let mut res = send(&service, "auth/captcha", GET, None::<&str>, vec![]).await;
+        let mut res = send(&service, "auth/captcha", Method::GET, None::<&str>, vec![]).await;
 
         assert_eq!(
             res.status_code,
