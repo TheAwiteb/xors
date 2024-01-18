@@ -1,4 +1,5 @@
 pub mod jwt;
+pub mod user;
 
 use std::env;
 use std::net::Ipv4Addr;
