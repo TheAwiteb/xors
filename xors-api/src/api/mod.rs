@@ -25,9 +25,10 @@ use salvo::{catcher::Catcher, http::HeaderValue, hyper::header, logging::Logger,
 
 use crate::schemas::MessageSchema;
 
-pub mod impls;
+pub mod exts;
 pub mod jwt;
 pub mod user;
+pub mod xo;
 
 pub fn write_json_body(res: &mut Response, json_body: impl serde::Serialize) {
     res.write_body(serde_json::to_string(&json_body).unwrap())
@@ -151,7 +152,8 @@ pub fn service(
                         .put(user::update_user)
                         .delete(user::delete_user)
                         .push(Router::with_path("me").get(user::get_me)),
-                ),
+                )
+                .push(Router::with_path("xo").goal(xo::user_connected)),
         );
 
     let doc = OpenApi::new("XORS API", env!("CARGO_PKG_VERSION"))

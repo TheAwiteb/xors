@@ -19,8 +19,9 @@ use serde::{Deserialize, Serialize};
 
 mod jwt;
 mod user;
+mod xo;
 
-pub use {jwt::*, user::*};
+pub use {jwt::*, user::*, xo::*};
 
 #[derive(Serialize, Deserialize, Clone, Debug, ToSchema, derive_new::new)]
 #[salvo(schema(symbol = "MessageSchema", example = json!(MessageSchema::new("Message".to_owned()))))]

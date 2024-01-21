@@ -175,3 +175,21 @@ pub async fn create_captcha(
     .save(conn)
     .await?)
 }
+
+/// End a game in the database. This will set the `ended_at` column to the current time and remove the `board` column.
+pub async fn end_game(conn: &sea_orm::DatabaseConnection, game_uuid: &Uuid) -> ApiResult<()> {
+    log::info!("Ending game: {}", game_uuid);
+
+    if let Some(mut game) = GameEntity::find()
+        .filter(GameColumn::Uuid.eq(*game_uuid))
+        .one(conn)
+        .await?
+        .map(IntoActiveModel::into_active_model)
+    {
+        game.ended_at = Set(Some(chrono::Utc::now().naive_utc()));
+        game.board = Set(String::new());
+        game.save(conn).await?;
+    }
+
+    Ok(())
+}

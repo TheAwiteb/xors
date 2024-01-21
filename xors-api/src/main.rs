@@ -56,6 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Migrator::up(&connection, None).await?;
 
     log::info!("Starting API on http://{host}:{port}");
+    log::info!("XO websocket is available at ws://{host}:{port}/xo");
     log::info!("The OpenAPI spec is available at http://{host}:{port}/api-doc/openapi.json");
     log::info!("The ReDoc documentation is available at http://{host}:{port}/api-doc/swagger-ui");
     log::info!("Press Ctrl+C to stop the API");

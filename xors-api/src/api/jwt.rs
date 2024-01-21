@@ -28,7 +28,7 @@ use salvo::{oapi::extract::JsonBody, prelude::*};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::impls::UserExt;
+use super::exts::UserExt;
 
 #[derive(Debug, Serialize, Deserialize, derive_new::new)]
 pub struct JwtClaims {
