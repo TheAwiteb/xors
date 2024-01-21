@@ -14,21 +14,27 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub use sea_orm_migration::prelude::*;
+use sea_orm::entity::prelude::*;
 
-mod m20240108_114814_user_table;
-mod m20240111_114045_captcha_table;
-mod m20240119_135153_game;
-
-pub struct Migrator;
-
-#[async_trait::async_trait]
-impl MigratorTrait for Migrator {
-    fn migrations() -> Vec<Box<dyn MigrationTrait>> {
-        vec![
-            Box::new(m20240108_114814_user_table::Migration),
-            Box::new(m20240111_114045_captcha_table::Migration),
-            Box::new(m20240119_135153_game::Migration),
-        ]
-    }
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
+#[sea_orm(table_name = "game")]
+pub struct Model {
+    #[sea_orm(primary_key)]
+    pub id: i32,
+    pub uuid: Uuid,
+    pub round: i16,
+    pub auto_play_after: Option<chrono::NaiveDateTime>,
+    pub rounds_result: String,
+    pub x_player: Uuid,
+    pub o_player: Uuid,
+    pub board: String,
+    pub winner: Option<Uuid>,
+    pub reason: Option<String>,
+    pub created_at: chrono::NaiveDateTime,
+    pub ended_at: Option<chrono::NaiveDateTime>,
 }
+
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+pub enum Relation {}
+
+impl ActiveModelBehavior for ActiveModel {}
