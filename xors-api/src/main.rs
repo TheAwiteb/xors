@@ -47,6 +47,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .await?;
     let secret_key = env::var("XORS_API_SECRET_KEY")
         .expect("`XORS_API_SECRET_KEY` environment variable must be set");
+    let max_online_games = env::var("XORS_API_MAX_ONLINE_GAMES")
+        .expect("`XORS_API_MAX_ONLINE_GAMES` environment variable must be set")
+        .parse::<usize>()
+        .expect("`XORS_API_MAX_ONLINE_GAMES` environment variable must be a number");
 
     log::debug!("Connected to the database");
     Migrator::up(&connection, None).await?;
@@ -61,7 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await;
     let server_handler = tokio::spawn(async move {
         Server::new(acceptor)
-            .serve(api::service(connection, secret_key))
+            .serve(api::service(connection, max_online_games, secret_key))
             .await
     });
 

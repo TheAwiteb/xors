@@ -90,7 +90,11 @@ async fn add_server_headers(res: &mut Response) {
     headers.insert("X-Powered-By", HeaderValue::from_static("Rust/Salvo"));
 }
 
-pub fn service(conn: sea_orm::DatabaseConnection, secret_key: String) -> Service {
+pub fn service(
+    conn: sea_orm::DatabaseConnection,
+    max_online_games: usize,
+    secret_key: String,
+) -> Service {
     let auth_handler: JwtAuth<jwt::JwtClaims, _> =
         JwtAuth::new(ConstDecoder::from_secret(secret_key.as_bytes()))
             .finders(vec![Box::new(
@@ -115,7 +119,11 @@ pub fn service(conn: sea_orm::DatabaseConnection, secret_key: String) -> Service
 
     let router = Router::new()
         .hoop(Logger::new())
-        .hoop(affix::inject(Arc::new(conn)).insert("secret_key", Arc::new(secret_key)))
+        .hoop(
+            affix::inject(Arc::new(conn))
+                .insert("secret_key", Arc::new(secret_key))
+                .insert("max_online_games", max_online_games),
+        )
         // Unauthorized routes
         .push(
             Router::new()
