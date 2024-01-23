@@ -94,6 +94,7 @@ async fn add_server_headers(res: &mut Response) {
 pub fn service(
     conn: sea_orm::DatabaseConnection,
     max_online_games: usize,
+    move_period: i64,
     secret_key: String,
 ) -> Service {
     let auth_handler: JwtAuth<jwt::JwtClaims, _> =
@@ -123,7 +124,8 @@ pub fn service(
         .hoop(
             affix::inject(Arc::new(conn))
                 .insert("secret_key", Arc::new(secret_key))
-                .insert("max_online_games", max_online_games),
+                .insert("max_online_games", Arc::new(max_online_games))
+                .insert("move_period", Arc::new(move_period)),
         )
         // Unauthorized routes
         .push(

@@ -119,6 +119,13 @@ impl RwLock<super::xo::Games> {
             })
     }
 
+    pub(crate) async fn get_game_players(&self, game_uuid: &Uuid) -> Option<(Player, Player)> {
+        self.read()
+            .await
+            .get(game_uuid)
+            .map(|(player1, player2)| (player1.clone(), player2.clone()))
+    }
+
     pub(crate) async fn is_user_in_game(&self, user_uuid: &Uuid) -> bool {
         self.read().await.iter().any(|(_, (player1, player2))| {
             player1.0.as_ref() == user_uuid || player2.0.as_ref() == user_uuid

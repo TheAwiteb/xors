@@ -332,6 +332,13 @@ mod api {
             self.cells[index as usize].is_none()
         }
 
+        /// Returns the empty cells.
+        pub fn empty_cells(&self) -> Vec<u8> {
+            (0..=8)
+                .filter(|&index| self.is_empty_cell(index))
+                .collect::<Vec<_>>()
+        }
+
         /// Check if the board is full.
         pub fn is_full(&self) -> bool {
             self.cells.iter().all(|cell| cell.is_some())

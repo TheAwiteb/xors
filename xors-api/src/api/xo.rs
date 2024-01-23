@@ -25,6 +25,7 @@ use chrono::Duration;
 use entity::prelude::*;
 use futures_util::{FutureExt, StreamExt};
 use once_cell::sync::Lazy;
+use rand::prelude::SliceRandom;
 use salvo::{prelude::*, websocket::Message};
 use tokio::sync::{mpsc, RwLock};
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -41,6 +42,8 @@ pub type Player = (
 );
 
 /// The XO games, for each game there is the game uuid and tow channels for the players.
+///
+/// Note: The first player is the X player and the second player is the O player.
 pub type Games = HashMap<Uuid, (Player, Player)>;
 
 static ONLINE_GAMES: Lazy<RwLock<Games>> = Lazy::new(RwLock::default);
@@ -69,7 +72,8 @@ pub async fn user_connected(
         .unwrap()
         .clone();
     let user_uuid = Arc::new(depot.user(&conn).await?.uuid);
-    let max_online_games = Arc::new(*depot.get::<usize>("max_online_games").unwrap());
+    let max_online_games = depot.get::<Arc<usize>>("max_online_games").unwrap().clone();
+    let move_period = depot.get::<Arc<i64>>("move_period").unwrap().clone();
 
     WebSocketUpgrade::new()
         .upgrade(req, res, |ws| async move {
@@ -114,6 +118,7 @@ pub async fn user_connected(
                                 event,
                                 &conn,
                                 max_online_games.as_ref(),
+                                *move_period.as_ref(),
                                 tx.clone(),
                                 user_uuid.clone(),
                             )
@@ -148,15 +153,16 @@ async fn handle_event(
     event: XoClientEvent,
     conn: &Arc<sea_orm::DatabaseConnection>,
     max_online_games: &usize,
+    move_period: i64,
     tx: Arc<mpsc::UnboundedSender<Result<Message, salvo::Error>>>,
     user: Arc<Uuid>,
 ) -> ApiResult<()> {
     match (event.event, event.data) {
         (XoClientEventKind::Search, None) => {
-            search_for_game(conn, max_online_games, (user, tx)).await?
+            search_for_game(conn, max_online_games, move_period, (user, tx)).await?
         }
         (XoClientEventKind::Play, Some(XoClientEventsData::Play { place })) => {
-            play(conn, (user, tx), place).await?
+            play(conn, (user, tx), place, move_period).await?
         }
         _ => {
             let _ = tx.send(XoServerEventData::Error(ErrorData::InvalidBody).into());
@@ -170,6 +176,7 @@ async fn handle_event(
 async fn search_for_game(
     conn: &sea_orm::DatabaseConnection,
     max_online_games: &usize,
+    move_period: i64,
     player: Player,
 ) -> ApiResult<()> {
     log::info!("Player {} is searching for a game", player.0);
@@ -207,6 +214,7 @@ async fn search_for_game(
         let game = GameActiveModel {
             uuid: Set(Uuid::new_v4()),
             round: Set(1i16),
+            auto_play_after: Set(Some(now + Duration::seconds(move_period))),
             rounds_result: Set(RoundsResult::default().to_string()),
             x_player: Set(*other_player.0.as_ref()),
             o_player: Set(*player.0.as_ref()),
@@ -243,7 +251,7 @@ async fn search_for_game(
 
         let _ = other_player.1.send(
             XoServerEventData::YourTurn {
-                auto_play_after: (now + Duration::seconds(10)).timestamp(),
+                auto_play_after: game.auto_play_after.as_ref().unwrap().timestamp(),
             }
             .into(),
         );
@@ -256,7 +264,12 @@ async fn search_for_game(
 }
 
 /// Play a move.
-async fn play(conn: &sea_orm::DatabaseConnection, player: Player, place: u8) -> ApiResult<()> {
+async fn play(
+    conn: &sea_orm::DatabaseConnection,
+    player: Player,
+    place: u8,
+    move_period: i64,
+) -> ApiResult<()> {
     if let Some((game_uuid, versus_player)) = ONLINE_GAMES.get_user_game(&player.0).await {
         log::info!("Player {} is playing in place {}", player.0, place);
 
@@ -298,6 +311,8 @@ async fn play(conn: &sea_orm::DatabaseConnection, player: Player, place: u8) -> 
             let _ = versus_player
                 .1
                 .send(XoServerEventData::Play(PlayData::new(place, *player.0.as_ref())).into());
+            game.auto_play_after =
+                Some((chrono::Utc::now() + Duration::seconds(move_period)).naive_utc());
             board.set_cell(place, player_symbol);
             let mut rounds_result =
                 RoundsResult::from_str(&game.rounds_result).expect("The rounds result is valid");
@@ -389,7 +404,7 @@ async fn play(conn: &sea_orm::DatabaseConnection, player: Player, place: u8) -> 
                 board = Board::default();
                 game.round += 1;
                 let data = Ok((XoServerEventData::YourTurn {
-                    auto_play_after: (chrono::Utc::now() + Duration::seconds(10)).timestamp(),
+                    auto_play_after: game.auto_play_after.unwrap().timestamp(),
                 })
                 .to_message());
                 if player_symbol == XoSymbol::X {
@@ -400,7 +415,7 @@ async fn play(conn: &sea_orm::DatabaseConnection, player: Player, place: u8) -> 
             } else {
                 let _ = versus_player.1.send(
                     XoServerEventData::YourTurn {
-                        auto_play_after: (chrono::Utc::now() + Duration::seconds(10)).timestamp(),
+                        auto_play_after: game.auto_play_after.unwrap().timestamp(),
                     }
                     .into(),
                 );
@@ -410,6 +425,7 @@ async fn play(conn: &sea_orm::DatabaseConnection, player: Player, place: u8) -> 
             game.board = Set(board.to_string());
             game.rounds_result = Set(rounds_result.to_string());
             game.round = Set(game.round.unwrap());
+            game.auto_play_after = Set(game.auto_play_after.unwrap());
             game.winner = Set(game.winner.unwrap());
             game.reason = Set(game.reason.unwrap());
             game.save(conn).await?;
@@ -457,4 +473,69 @@ async fn player_disconnected(conn: &sea_orm::DatabaseConnection, player: Player)
         SEARCH_FOR_GAME.remove_user(&player.0).await;
     }
     Ok(())
+}
+
+/// Auto play handler.
+
+/// ### Note
+/// This function will run while there is at least one online game, if not then it will wait 5 seconds and check again.
+pub async fn auto_play_handler(conn: sea_orm::DatabaseConnection, move_period: i64) {
+    async fn inner(conn: &sea_orm::DatabaseConnection, move_period: i64) -> ApiResult<()> {
+        log::info!("Starting auto play handler");
+
+        loop {
+            let games = GameEntity::find()
+                .filter(
+                    GameColumn::EndedAt
+                        .is_null()
+                        .and(GameColumn::AutoPlayAfter.is_not_null()),
+                )
+                .all(conn)
+                .await?;
+            if !games.is_empty() {
+                for game in games {
+                    if let Some(auto_play_after) = game.auto_play_after {
+                        let board = Board::from_str(&game.board).expect("The board is valid");
+                        if chrono::Utc::now().naive_utc() >= auto_play_after {
+                            let players = ONLINE_GAMES
+                                .get_game_players(&game.uuid)
+                                .await
+                                .expect("The game should be in the online games");
+                            let player = if board.turn() == XoSymbol::X {
+                                players.0.clone()
+                            } else {
+                                players.1.clone()
+                            };
+
+                            let place = board
+                            .empty_cells()
+                            .choose(&mut rand::thread_rng())
+                            .expect("There is at least one empty cell, if the board is full then the game should be ended")
+                            .to_owned();
+
+                            let _ = player.1.send(XoServerEventData::AutoPlay { place }.into());
+
+                            log::info!(
+                                "Playing for player {} in game {} in place {place}",
+                                player.0,
+                                game.uuid
+                            );
+                            play(conn, player.clone(), place, move_period).await?;
+                        }
+                    }
+                }
+                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+            } else {
+                log::info!("There is no online games, waiting 5 seconds");
+                tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+            }
+        }
+    }
+
+    loop {
+        if let Err(err) = inner(&conn, move_period).await {
+            log::error!("Auto play handler error: {err}");
+            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+        }
+    }
 }
