@@ -1,6 +1,6 @@
 [package]
 authors = ["TheAwiteb <awiteb@hotmail.com>"]
-description = "A API for xors (XO game)"
+description = "A RESTful tic tac toy API for XORS project"
 edition = "2021"
 license = "AGPL-3.0-or-later"
 name = "xors-api"
