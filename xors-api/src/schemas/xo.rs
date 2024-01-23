@@ -1,4 +1,4 @@
-// A API for xors (Xo game)
+// A RESTful tic tac toy API for XORS project
 // Copyright (C) 2024  Awiteb <awitb@hotmail.com>
 //
 // This program is free software: you can redistribute it and/or modify

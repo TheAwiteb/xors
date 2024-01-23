@@ -1,6 +1,6 @@
 # xors
 
-Xors is a simple tik tak toe game, supporting multiplayer, singleplayer and 2 player mode.
+Xors is a simple tik tac toe game, supporting multiplayer, singleplayer and 2 player mode.
 
 ## Requirements
 Docker and docker-compose
