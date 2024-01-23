@@ -15,5 +15,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod captcha;
+pub mod game;
 pub mod prelude;
 pub mod user;

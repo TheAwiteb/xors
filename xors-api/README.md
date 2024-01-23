@@ -6,9 +6,18 @@ Xors API is a REST API for the [xors](https://github.com/TheAwiteb/xors) project
 - [X] Full documentation using Swagger UI
 - [X] JWT authentication with refresh tokens
 - [X] Captcha support
+- [X] Rate limiting
+- [ ] File logging (currently using stdout)
 - [X] Username and password validation
 - [ ] Password reset
-- [ ] Multiplayer support with websockets
+- [X] Multiplayer support with websockets
+- [ ] Game replay
+- [X] Auto play when the other take too long to play
+- [ ] In-game chat
+- [ ] Private games
+- [ ] Friends system (add, remove, block, unblock, invite to game (if online))
+- [ ] [Elo rating system](https://en.wikipedia.org/wiki/Elo_rating_system) (with leaderboard)
+
 
 ## Requirements
 The API can be run only using Docker and docker-compose.
@@ -36,16 +45,18 @@ The log file is located at `/app/logs/xors.log` inside the container, you can ac
 docker cp xors_api_1:/app/logs/xors_api.log xors_api.log
 ``` -->
 
-### Database
+
+
+## Database
 The PostgreSQL database is in a separate container, and doesn't have any connection to the host machine.
 
-#### Backup
+### Backup
 To backup the database, you can use the following command:
 ```bash
 docker-compose exec db bash -c "export PGPASSWORD=mypassword && pg_dump -U myuser xors_api_db" | gzip -9 > "xors_api_db-postgres-backup-$(date +%d-%m-%Y"_"%H_%M_%S).sql.gz"
 ```
 
-#### Restore
+### Restore
 To restore the database, you can use the following command:
 
 > [!NOTE]
@@ -73,12 +84,6 @@ For development, you need to have this requirements:
 - [cargo-dotenv](https://crates.io/crates/cargo-dotenv)
 - [docker-compose](https://docs.docker.com/engine/install/)
 
-#### Run the database
-For the database, we will run it in a docker container, you can run it using the following command:
-```bash
-docker-compose up -d db
-```
-
 #### Run the API
 To run the API, you need to run the following command:
 ```bash
@@ -100,150 +105,164 @@ docker-compose stop db
 ### Flowchart
 You can find the flowchart of the API at [`flowchart.mermaid`](./flowchart.mermaid) file. And this is how it looks like:
 
-#### Auth
-```mermaid
-flowchart TB
-    start([Start])
 
-    %% Start the auth endpoints
-    start --> /auth
+## Multiplayer WebSocket API
+Our WebSocket API is easy to use, and it's based on [JSON](https://www.json.org/json-en.html) messages. The WebSocket API is located at `ws://<HOST>:<POST>/xo/` and it's only available for authenticated users, meaning that you need to send the `Authorization` header with the `Bearer <TOKEN>` value in the [WebSocket handshake request](https://en.wikipedia.org/wiki/WebSocket#Protocol_handshake).
 
-    %% The auth endpoints
-    subgraph /auth
-        auth_start -- GET --> captcha
-        auth_start -- POST --> signup
-        auth_start -- POST --> signin
-        auth_start -- GET --> refresh
+### Client Events
+The client can send the following events to the server:
 
-        subgraph captcha endpoint
-            captcha["/captcha"]
-            captcha_END([End])
+#### `search` event
+The client can send the `search` event to the server to search for a new game. The event has the following structure:
+```json
+{
+    "event":"search",
+}
+```
+#### `play` event
+The client can send the `play` event to the server to play a move. The event has the following structure:
+```json
+{
+    "event":"play",
+    "data":{"place":5}
+}
+```
+- `place` is the place number, and it's a number between 0 and 8, and it's mapped to the following board:
 
-            captcha --> captcha_T1(["Send captcha"]) -- 200 --> captcha_END
-        end
-
-        subgraph signup endpoint
-            signup["/signup"]
-            signup_END([End])
-
-            signup --> signup_Q1{"Is signin schema\nentered correctly?"}
-            signup_Q1 -- "Yes" --> signup_Q2{"Is the captcha\ncorrect?"}
-            signup_Q1 -- "No" --> signup_T1(["Send 400\nerror"]) --> signup_END
-
-            signup_Q2 -- "Yes" --> signup_Q3{"Are all user data\nvalide?"}
-            signup_Q2 -- "No" --> signup_T2(["Send 403\nerror"]) --> signup_END
-
-            signup_Q3 -- "Yes" --> signup_T3(["Create the\nuser and send\nit's data\nwith JWT"]) -- 200 --> signup_END
-            signup_Q3 -- "No" --> signup_T4(["Send 400\nerror"]) --> signup_END
-        end
-
-        subgraph signin endpoint
-            signin["/signin"]
-            signin_END([End])
-
-            signin --> signin_Q1{"Is signin schema\nentered correctly?"}
-            signin_Q1 -- "Yes" --> signin_Q2{"Do the username and\npassword exist?"}
-            signin_Q1 -- "No" --> signin_T1(["Send 400\nerror"]) --> signin_END
-
-            signin_Q2 -- "Yes" --> signin_T2(["Send the\nuser data\nwith JWT"]) -- 200 --> signin_END
-            signin_Q2 -- "No" --> signin_T3(["Send 403\nerror"]) --> signin_END
-        end
-
-        subgraph refresh endpoint
-            refresh["/refresh"]
-            refresh_END([End])
-
-            refresh --> refresh_Q1{"Is there Authorization header?"}
-            refresh_Q1 -- "Yes" --> refresh_Q2{"Is valid\nBearer JWT token?"}
-            refresh_Q1 -- "No" --> refresh_T1(["Send 403\nerror"]) --> refresh_END
-
-            refresh_Q2 -- "Yes" --> refresh_Q3{"Is it a\nrefresh token?"}
-            refresh_Q2 -- "No" --> refresh_T2(["Send 403\nerror"]) --> refresh_END
-
-            refresh_Q3 -- "Yes" --> refresh_Q4{"Is in the active time?\nand it's not expired?"}
-            refresh_Q3 -- "No" --> refresh_T3(["Send 400\nerror"]) --> refresh_END
-
-            refresh_Q4 -- "Yes" --> refresh_T4(["Send the\nuser data\nwith JWT"]) -- 200 --> refresh_END
-            refresh_Q4 -- "No" --> refresh_T5(["Send 403\nerror"]) --> refresh_END
-        end
-    end
+```
+0 | 1 | 2
+---------
+3 | 4 | 5
+---------
+6 | 7 | 8
 ```
 
-#### Users
-```mermaid
-flowchart TB
-    start([Start])
+### Server Events
+The server can send the following events to the client:
 
-    %% Start the auth endpoints
-    start --> /user
-
-    subgraph /user
-        user_start -- GET --> me
-        user_start -- GET --> get_user
-        user_start -- DELETE --> delete_user
-        user_start -- PUT --> put_user
-
-        subgraph me_endpint
-            me["/me"]
-            me_END([End])
-
-            me --> me_Q1{"Is there Authorization header?"}
-            me_Q1 -- "Yes" --> me_Q2{"Is valid\nBearer JWT token?"}
-            me_Q1 -- "No" --> me_T1(["Send 403\nerror"]) --> me_END
-
-            me_Q2 -- "Yes"  --> me_T4(["Send the\nuser data"]) -- 200 --> me_END
-            me_Q2 -- "No" --> me_T2(["Send 403\nerror"]) --> me_END
-        end
-
-        subgraph get_user
-            get_user_END([End])
-
-            get_user_Q1{"Is there Authorization header?"}
-            get_user_Q1 -- "Yes" --> get_user_Q2{"Is valid\nBearer JWT token?"}
-            get_user_Q1 -- "No" --> get_user_T1(["Send 403\nerror"]) --> get_user_END
-
-            get_user_Q2 -- "Yes" --> get_user_Q3{"Is there is `uuid`\nin the query?"}
-            get_user_Q2 -- "No" --> get_user_T2(["Send 403\nerror"]) --> get_user_END
-
-            get_user_Q3 -- "Yes" --> get_user_Q4{"Is the user `uuid`\nexist?"}
-            get_user_Q3 -- "No" --> get_user_T3(["Send 400\nerror"]) --> get_user_END
-
-            get_user_Q4 -- "Yes" --> get_user_T4(["Send the\nuser data"]) -- 200 --> get_user_END
-            get_user_Q4 -- "No" --> get_user_T5(["Send 404\nerror"]) --> get_user_END
-        end
-
-        subgraph delete_user
-            delete_user_END([End])
-
-            delete_user_Q1{"Is there Authorization header?"}
-            delete_user_Q1 -- "Yes" --> delete_user_Q2{"Is valid\nBearer JWT token?"}
-            delete_user_Q1 -- "No" --> delete_user_T1(["Send 403\nerror"]) --> delete_user_END
-
-            delete_user_Q2 -- "Yes" --> delete_user_Q3{"Is delete schema\nentered correctly?\password"}
-            delete_user_Q2 -- "No" --> delete_user_T2(["Send 403\nerror"]) --> delete_user_END
-
-            delete_user_Q3 -- "Yes" --> delete_user_Q4{"Do the username and\npassword valid?"}
-            delete_user_Q3 -- "No" --> delete_user_T3(["Send 400\nerror"]) --> delete_user_END
-
-            delete_user_Q4 -- "Yes" --> delete_user_T4(["Delete the\nuser"]) -- 200 --> delete_user_END
-            delete_user_Q4 -- "No" --> delete_user_T5(["Send 403\nerror"]) --> delete_user_END
-        end
-
-        subgraph put_user
-            put_user_END([End])
-
-            put_user_Q1{"Is there Authorization header?"}
-            put_user_Q1 -- "Yes" --> put_user_Q2{"Is valid\nBearer JWT token?"}
-            put_user_Q1 -- "No" --> put_user_T1(["Send 403\nerror"]) --> put_user_END
-
-            put_user_Q2 -- "Yes" --> put_user_Q3{"Is delete schema\nentered correctly?\first_name,last_name"}
-            put_user_Q2 -- "No" --> put_user_T2(["Send 403\nerror"]) --> put_user_END
-
-            put_user_Q3 -- "Yes" --> put_user_T3(["Delete the\nuser"]) -- 200 --> put_user_END
-            put_user_Q3 -- "No" --> put_user_T4(["Send 400\nerror"]) --> put_user_END
-        end
-    end
+#### `game_found` event
+The server sends the `game_found` event to the client when finding a game for the client after sending the [`search` event](#search-event). The event has the following structure:
+```json
+{
+    "event":"game_found",
+    "data":{"x_player":"<PLAYER_UUID>","o_player":"<PLAYER_UUID>"}
+}
 ```
+- `x_player` is the UUID of the player who will play with the `X` symbol.
+- `o_player` is the UUID of the player who will play with the `O` symbol.
+
+#### `your_turn` event
+The `your_turn` event is sent to the client when it's their turn to play. The event has the following structure:
+```json
+{
+    "event":"your_turn",
+    "data":{"auto_play_after":<TIMESTAMP>}
+}
+```
+- `auto_play_after` is the timestamp of when the server will play automatically if the client didn't play before that time.
+
+#### `round_start` event
+The `round_start` event is sent to the client when a new round starts, the round starts when the game found and when the before round ends (if the game is not over). The event has the following structure:
+```json
+{
+    "event":"round_start",
+    "data":{"round":2}
+}
+```
+- `round` is the round number.
+
+#### `round_end` event
+The `round_end` event is sent to the client when a round ends, when the round end and the game is not over. If the game is over, the `game_over` event will be sent instead. The event has the following structure:
+```json
+{
+    "event":"round_end",
+    "data":{"round":1,"winner":"<PLAYER_UUID>"}
+}
+```
+- `round` is the round number.
+- `winner` is the UUID of the winner, if the round is a draw, the value will be `null`.
+
+#### `play` event
+The `play` event is sent to the client when the other player plays. The event has the following structure:
+```json
+{
+    "event":"play",
+    "data":{"place":4,"player":"<PLAYER_UUID>"}
+}
+```
+- `place` is the place number, and it's a number between 0 and 8, and it's mapped to the following board:
+
+```
+0 | 1 | 2
+---------
+3 | 4 | 5
+---------
+6 | 7 | 8
+```
+- `player` is the UUID of the player who played.
+
+#### `auto_play` event
+The `auto_play` event is sent to the client when the server plays for the client because the client didn't play before the `auto_play_after` time in the [`your_turn` event](#your_turn-event). The event has the following structure:
+```json
+{
+    "event":"auto_play",
+    "data":{"place":4}
+}
+```
+- `place` is the place number, and it's a number between 0 and 8, and it's mapped to the following board:
+
+```
+0 | 1 | 2
+---------
+3 | 4 | 5
+---------
+6 | 7 | 8
+```
+
+#### `game_over` event
+The `game_over` event is sent to the client when the game is over. The event has the following structure:
+```json
+{
+    "event":"game_over",
+    "data":{"winner":"<PLAYER_UUID>","reason":"<REASON>"}
+}
+```
+- `winner` is the UUID of the winner, if the game is a draw, the value will be `null`.
+- `reason` is the reason of the game over, checkout the [Game Over Reasons](#game-over-reasons) section for more information.
+
+#### `error` event
+The `error` event is sent to the client when an error occurs. The event has the following structure:
+```json
+{
+    "event":"error",
+    "data":"<MESSAGE>"
+}
+```
+- `message` is the error message, checkout the [Errors](#errors) section for more information.
+
+### Game Over Reasons
+The game over reason is sent to the client when the game is over, and it's sent in the [`game_over` event](#game_over-event). The following are the game over reasons:
+| Reason | Description |
+| --- | --- |
+| `player_won` | The player won the game. |
+| `draw` | The game is a draw. |
+| `player_disconnected` | The other player disconnected. |
+
+### Errors
+The error message is sent to the client when an error occurs, and it's sent in the [`error` event](#error-event). The following are the error messages:
+| Message | Description | Reason |
+| --- | --- | --- |
+| `invalid_body` | The event body is invalid | When the event body is not a valid JSON |
+| `unknown_event` | The event is unknown | When the event is not client event |
+| `invalid_event_data_for_event` | The event data is invalid for the event | When the event data is invalid for the event |
+| `already_in_search` | The player is already in search | When the player tries to search for a game while they are already in search |
+| `already_in_game` | The player is already in a game | When the player tries to search for a game while they are already in a game |
+| `not_in_game` | The player is not in a game | When the player tries to play a move while they are not in a game |
+| `not_your_turn` | It's not the player turn | When the player tries to play a move while it's not their turn |
+| `invalid_place` | The place is invalid | When the player tries to play a move with an invalid place, like already played place or place out of the board |
+| `max_games_reached` | The server reached the maximum games limit | When the server reached the maximum games limit |
+| `other` | Other errors | Usually when an unexpected error occurs, like a database error, if you get this error, try to resend the last event and report the error to the server owner |
+
 
 ## License
 This project is licensed under the AGPL-3.0 License - see the [LICENSE](LICENSE) file for details

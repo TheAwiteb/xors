@@ -14,18 +14,27 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use salvo::oapi::ToSchema;
-use serde::{Deserialize, Serialize};
+use sea_orm::entity::prelude::*;
 
-mod jwt;
-mod user;
-mod xo;
-
-pub use {jwt::*, user::*, xo::*};
-
-#[derive(Serialize, Deserialize, Clone, Debug, ToSchema, derive_new::new)]
-#[salvo(schema(symbol = "MessageSchema", example = json!(MessageSchema::new("Message".to_owned()))))]
-pub struct MessageSchema {
-    #[salvo(schema(example = "Message"))]
-    message: String,
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
+#[sea_orm(table_name = "game")]
+pub struct Model {
+    #[sea_orm(primary_key)]
+    pub id: i32,
+    pub uuid: Uuid,
+    pub round: i16,
+    pub auto_play_after: Option<chrono::NaiveDateTime>,
+    pub rounds_result: String,
+    pub x_player: Uuid,
+    pub o_player: Uuid,
+    pub board: String,
+    pub winner: Option<Uuid>,
+    pub reason: Option<String>,
+    pub created_at: chrono::NaiveDateTime,
+    pub ended_at: Option<chrono::NaiveDateTime>,
 }
+
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+pub enum Relation {}
+
+impl ActiveModelBehavior for ActiveModel {}

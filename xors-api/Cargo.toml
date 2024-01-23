@@ -27,17 +27,18 @@ chrono = "0.4.31"
 derive-new = "0.6.0"
 log = "0.4.20"
 pretty_env_logger = "0.5.0"
-salvo = { version = "0.64.2", features = [
+salvo = { version = "0.65.0", features = [
     "logging",
     "affix",
     "oapi",
     "jwt-auth",
     "rate-limiter",
+    "websocket",
 ] }
 jsonwebtoken = "9.2.0"
 serde = {version = "1.0.195", features = ["derive"]}
 serde_json = "1.0.108"
-tokio = {version = "1.35.1", features = ["macros", "rt-multi-thread", "signal"]}
+tokio = {version = "1.35.1", features = ["macros", "rt-multi-thread", "signal", "sync"]}
 uuid = {version = "1.6.1", features = ["v4"]}
 thiserror = "1.0.56"
 bcrypt = "0.15.0"
@@ -45,3 +46,8 @@ passwords = { version = "3.1.16", features = ["common-password"] }
 captcha = "0.0.9"
 base64 = "0.21.6"
 async-trait = "0.1.77"
+tokio-stream = { version = "0.1.14", features = ["net"] }
+once_cell = "1.19.0"
+futures-util = { version = "0.3.30", features = ["sink"] }
+easy-ext = "1.0.1"
+rand = "0.8.5"

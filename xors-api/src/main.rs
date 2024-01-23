@@ -47,25 +47,47 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .await?;
     let secret_key = env::var("XORS_API_SECRET_KEY")
         .expect("`XORS_API_SECRET_KEY` environment variable must be set");
+    let max_online_games = env::var("XORS_API_MAX_ONLINE_GAMES")
+        .expect("`XORS_API_MAX_ONLINE_GAMES` environment variable must be set")
+        .parse::<usize>()
+        .expect("`XORS_API_MAX_ONLINE_GAMES` environment variable must be a number");
+    let move_period = env::var("XORS_API_MOVE_PERIOD")
+        .expect("`XORS_API_MOVE_PERIOD` environment variable must be set")
+        .parse::<i64>()
+        .expect("`XORS_API_MOVE_PERIOD` environment variable must be a number");
+    if move_period < 0 {
+        panic!("`XORS_API_MOVE_PERIOD` environment variable must be a positive number");
+    }
 
     log::debug!("Connected to the database");
     Migrator::up(&connection, None).await?;
 
     log::info!("Starting API on http://{host}:{port}");
+    log::info!("XO websocket is available at ws://{host}:{port}/xo");
     log::info!("The OpenAPI spec is available at http://{host}:{port}/api-doc/openapi.json");
     log::info!("The ReDoc documentation is available at http://{host}:{port}/api-doc/swagger-ui");
     log::info!("Press Ctrl+C to stop the API");
 
+    let server_connection = connection.clone();
     let acceptor = salvo::conn::TcpListener::new(format!("{host}:{port}"))
         .bind()
         .await;
     let server_handler = tokio::spawn(async move {
         Server::new(acceptor)
-            .serve(api::service(connection, secret_key))
+            .serve(api::service(
+                server_connection,
+                max_online_games,
+                move_period,
+                secret_key,
+            ))
             .await
+    });
+    let auto_play_handler = tokio::spawn(async move {
+        api::xo::auto_play_handler(connection, move_period).await;
     });
 
     server_handler.await?;
+    auto_play_handler.await?;
     log::info!("API is shutting down");
 
     Ok(())

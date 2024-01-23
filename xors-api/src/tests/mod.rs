@@ -68,6 +68,8 @@ pub fn get_secret_key() -> String {
 pub async fn get_service() -> ApiResult<Service> {
     Ok(crate::api::service(
         get_connection().await?,
+        100,
+        10,
         get_secret_key(),
     ))
 }

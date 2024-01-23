@@ -28,6 +28,8 @@ pub enum ApiError {
     SerdeJson(#[from] serde_json::Error),
     #[error("{0}")]
     Bcrypt(#[from] bcrypt::BcryptError),
+    #[error("{0}")]
+    Salvo(#[from] salvo::http::StatusError),
 
     #[error("Username `{0}` already exists")]
     UsernameAlreadyExists(String),
@@ -124,6 +126,10 @@ impl Scribe for ApiError {
             | ApiError::InvalidCaptchaAnswer
             | ApiError::InvalidCaptchaToken => {
                 res.status_code(StatusCode::FORBIDDEN);
+                crate::api::write_json_body(res, MessageSchema::new(self.to_string()));
+            }
+            ApiError::Salvo(err) => {
+                res.status_code(err.code);
                 crate::api::write_json_body(res, MessageSchema::new(self.to_string()));
             }
         }

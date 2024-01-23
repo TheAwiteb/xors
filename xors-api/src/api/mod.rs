@@ -25,9 +25,10 @@ use salvo::{catcher::Catcher, http::HeaderValue, hyper::header, logging::Logger,
 
 use crate::schemas::MessageSchema;
 
-pub mod impls;
+pub mod exts;
 pub mod jwt;
 pub mod user;
+pub mod xo;
 
 pub fn write_json_body(res: &mut Response, json_body: impl serde::Serialize) {
     res.write_body(serde_json::to_string(&json_body).unwrap())
@@ -90,7 +91,12 @@ async fn add_server_headers(res: &mut Response) {
     headers.insert("X-Powered-By", HeaderValue::from_static("Rust/Salvo"));
 }
 
-pub fn service(conn: sea_orm::DatabaseConnection, secret_key: String) -> Service {
+pub fn service(
+    conn: sea_orm::DatabaseConnection,
+    max_online_games: usize,
+    move_period: i64,
+    secret_key: String,
+) -> Service {
     let auth_handler: JwtAuth<jwt::JwtClaims, _> =
         JwtAuth::new(ConstDecoder::from_secret(secret_key.as_bytes()))
             .finders(vec![Box::new(
@@ -115,7 +121,12 @@ pub fn service(conn: sea_orm::DatabaseConnection, secret_key: String) -> Service
 
     let router = Router::new()
         .hoop(Logger::new())
-        .hoop(affix::inject(Arc::new(conn)).insert("secret_key", Arc::new(secret_key)))
+        .hoop(
+            affix::inject(Arc::new(conn))
+                .insert("secret_key", Arc::new(secret_key))
+                .insert("max_online_games", Arc::new(max_online_games))
+                .insert("move_period", Arc::new(move_period)),
+        )
         // Unauthorized routes
         .push(
             Router::new()
@@ -143,7 +154,8 @@ pub fn service(conn: sea_orm::DatabaseConnection, secret_key: String) -> Service
                         .put(user::update_user)
                         .delete(user::delete_user)
                         .push(Router::with_path("me").get(user::get_me)),
-                ),
+                )
+                .push(Router::with_path("xo").goal(xo::user_connected)),
         );
 
     let doc = OpenApi::new("XORS API", env!("CARGO_PKG_VERSION"))
