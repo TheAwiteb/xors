@@ -17,6 +17,7 @@
 use crate::api::jwt::JwtClaims;
 use crate::errors::{ApiError, ApiResult};
 use crate::schemas::*;
+use chrono::Duration;
 use entity::prelude::*;
 use jsonwebtoken::Header;
 use uuid::Uuid;
@@ -192,4 +193,86 @@ pub async fn end_game(conn: &sea_orm::DatabaseConnection, game_uuid: &Uuid) -> A
     }
 
     Ok(())
+}
+
+/// Create a new game in the database.
+pub async fn create_game(
+    conn: &sea_orm::DatabaseConnection,
+    x_player: Uuid,
+    o_player: Uuid,
+    move_period: i64,
+) -> ApiResult<GameActiveModel> {
+    log::info!("Creating game");
+
+    let uuid = loop {
+        let uuid = Uuid::new_v4();
+        if GameEntity::find()
+            .filter(GameColumn::Uuid.eq(uuid))
+            .count(conn)
+            .await?
+            == 0
+        {
+            break uuid;
+        }
+    };
+
+    let now = chrono::Utc::now().naive_utc();
+    Ok(GameActiveModel {
+        uuid: Set(uuid),
+        round: Set(1i16),
+        auto_play_after: Set(Some(now + Duration::seconds(move_period))),
+        rounds_result: Set(RoundsResult::default().to_string()),
+        x_player: Set(x_player),
+        o_player: Set(o_player),
+        board: Set(Board::default().to_string()),
+        winner: Set(None),
+        reason: Set(None),
+        created_at: Set(now),
+        ..Default::default()
+    }
+    .save(conn)
+    .await?)
+}
+
+/// Get a game from the database by uuid.
+///
+/// **Note**: This will return the game only if it's ended.
+pub async fn get_game(
+    conn: &sea_orm::DatabaseConnection,
+    game_uuid: &Uuid,
+) -> ApiResult<GameModel> {
+    log::info!("Getting game: {}", game_uuid);
+
+    GameEntity::find()
+        .filter(
+            GameColumn::Uuid
+                .eq(*game_uuid)
+                .and(GameColumn::EndedAt.is_not_null()),
+        )
+        .one(conn)
+        .await?
+        .ok_or(ApiError::GameNotFound)
+}
+
+/// Returns lastest 10 games from the database.
+pub async fn get_lastest_games(conn: &sea_orm::DatabaseConnection) -> ApiResult<Vec<GameModel>> {
+    log::info!("Getting lastest games");
+
+    Ok(GameEntity::find()
+        .filter(GameColumn::EndedAt.is_not_null())
+        .order_by(GameColumn::CreatedAt, Order::Desc)
+        .limit(10)
+        .all(conn)
+        .await?)
+}
+
+/// Returns online games from the database.
+pub async fn get_online_games(conn: &sea_orm::DatabaseConnection) -> ApiResult<Vec<GameModel>> {
+    log::info!("Getting online games");
+
+    Ok(GameEntity::find()
+        .filter(GameColumn::EndedAt.is_null())
+        .order_by(GameColumn::CreatedAt, Order::Desc)
+        .all(conn)
+        .await?)
 }
