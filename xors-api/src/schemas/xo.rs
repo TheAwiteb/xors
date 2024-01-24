@@ -18,7 +18,9 @@ pub use self::api::*;
 pub use self::websocket::*;
 
 mod websocket {
-    use salvo::websocket::Message;
+    use std::str::FromStr;
+
+    use salvo::{oapi::ToSchema, websocket::Message};
     use serde::{Deserialize, Serialize};
     use uuid::Uuid;
 
@@ -147,8 +149,9 @@ mod websocket {
     }
 
     /// The Xo game over reason.
-    #[derive(Serialize, Deserialize, Clone, Debug)]
+    #[derive(Serialize, Deserialize, Clone, Debug, ToSchema)]
     #[serde(rename_all = "snake_case")]
+    #[salvo(schema(symbol = "GameOverReasonSchema", example = json!(GameOverReason::PlayerWon)))]
     pub enum GameOverReason {
         /// The game is over because the player won.
         PlayerWon,
@@ -239,6 +242,19 @@ mod websocket {
             }
         }
     }
+
+    impl FromStr for GameOverReason {
+        type Err = ();
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s {
+                "Player Won" => Ok(Self::PlayerWon),
+                "Draw" => Ok(Self::Draw),
+                "Player Disconnected" => Ok(Self::PlayerDisconnected),
+                _ => Err(()),
+            }
+        }
+    }
 }
 
 /// API schemas.
@@ -246,11 +262,11 @@ mod api {
     use std::str::FromStr;
 
     use salvo::prelude::*;
-    use serde::Serialize;
+    use serde::{Deserialize, Serialize};
 
     /// The Xo symbol.
-    #[derive(Serialize, PartialEq, Eq, Clone, Copy, Debug, ToSchema)]
-    #[salvo(symbol = "XoSymbolSchema", example = XoSymbol::X)]
+    #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Copy, Debug, ToSchema)]
+    #[salvo(schema(symbol = "XoSymbolSchema", example = json!{XoSymbol::X}))]
     pub enum XoSymbol {
         /// The X symbol.
         X,
@@ -259,20 +275,20 @@ mod api {
     }
 
     /// The XO game board.
-    #[derive(Serialize, Clone, Debug, Default, ToSchema)]
-    #[salvo(symbol = "BoardSchema", example = json!(Board::default()))]
+    #[derive(Serialize, Deserialize, Clone, Debug, Default, ToSchema)]
+    #[salvo(schema(symbol = "BoardSchema", example = json!(Board::default())))]
     pub struct Board {
         /// The board cells.
         #[salvo(madx = 9)]
         cells: [Option<XoSymbol>; 9],
         /// The sequence of the played cells.
         /// It's shows the played cells in order by the index.
-        played_cells: Vec<u8>,
+        played_cells: Vec<u32>, // HACK: The `u32` is used because the `u8` looks like binary in the swagger ui.
     }
 
     /// The XO rounds result.
-    #[derive(Serialize, Clone, Debug, Default, ToSchema)]
-    #[salvo(symbol = "RoundsResultSchema")]
+    #[derive(Serialize, Deserialize, Clone, Debug, Default, ToSchema)]
+    #[salvo(schema(symbol = "RoundsResultSchema"))]
     pub struct RoundsResult {
         /// The X player rounds wins.
         pub x_player: usize,
@@ -324,7 +340,7 @@ mod api {
             assert!(index <= 8, "The index must be between 0 and 8");
 
             self.cells[index as usize] = Some(symbol);
-            self.played_cells.push(index);
+            self.played_cells.push(index as u32);
         }
 
         /// Check if the cell is empty.
