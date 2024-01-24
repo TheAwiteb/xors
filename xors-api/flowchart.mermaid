@@ -136,3 +136,29 @@ flowchart TB
             put_user_Q3 -- "No" --> put_user_T4(["Send 400\nerror"]) --> put_user_END
         end
     end
+
+    %% The game endpoints
+    subgraph /game
+        game_start -- GET --> /UUID
+        game_start --> /lastest
+
+        subgraph /UUID
+            get_game_END([End])
+
+            get_game_Q1{"Is there is `uuid`\nin the query?"}
+            get_game_Q1 -- "Yes" --> get_game_Q2{"Is the game `uuid`\nexist?"}
+            get_game_Q1 -- "No" --> get_game_T1(["Send 404\nerror"]) --> get_game_END
+
+            get_game_Q2 -- "Yes" --> get_game_T3(["Send the\ngame data"]) -- 200 --> get_game_END
+            get_game_Q2 -- "No" --> get_game_T4(["Send 404\nerror"]) --> get_game_END
+        end
+
+        subgraph /lastest
+            lastest_game_start -- GET --> get_lastest
+
+            subgraph get_lastest
+                lastest_game_END([End])
+                lastest_game_T1(["lastest lastest\n10 games"]) -- 200 --> lastest_game_END
+            end
+        end
+    end
