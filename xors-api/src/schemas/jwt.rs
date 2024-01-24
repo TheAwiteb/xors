@@ -111,6 +111,25 @@ pub struct CaptchaSchema {
     pub expired_at: chrono::NaiveDateTime,
 }
 
+impl UserSchema {
+    /// Returns a deleted user.
+    ///
+    /// This only used when the game's player is deleted, so we can still return the game's data. (It's not saving the real player's data)
+    pub(crate) fn deleted_user() -> Self {
+        Self {
+            uuid: Uuid::nil(),
+            first_name: "Deleted".to_owned(),
+            last_name: Some("Player".to_owned()),
+            username: "Deleted".to_owned(),
+            profile_image_url: "https://api.dicebear.com/7.x/initials/svg?seed=Deleted".to_owned(),
+            wins: 0,
+            losts: 0,
+            draw: 0,
+            created_at: chrono::Utc::now().naive_utc(),
+        }
+    }
+}
+
 impl Default for UserSchema {
     fn default() -> Self {
         Self {
