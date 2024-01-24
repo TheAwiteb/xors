@@ -26,6 +26,7 @@ use salvo::{catcher::Catcher, http::HeaderValue, hyper::header, logging::Logger,
 use crate::schemas::MessageSchema;
 
 pub mod exts;
+pub mod game;
 pub mod jwt;
 pub mod user;
 pub mod xo;
@@ -138,7 +139,9 @@ pub fn service(
                         .push(Router::with_path("signin").post(jwt::signin))
                         .push(Router::with_path("captcha").get(jwt::captcha)),
                 )
-                .push(Router::with_path("user").get(user::get_user_info)),
+                .push(Router::with_path("user").get(user::get_user_info))
+                .push(Router::with_path("game/<uuid>").get(game::get_game_by_uuid))
+                .push(Router::with_path("games").get(game::get_lastest_games)),
         )
         // Authorized routes
         .push(
