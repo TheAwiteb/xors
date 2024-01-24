@@ -43,6 +43,8 @@ pub enum ApiError {
     ExpiredToken,
     #[error("User not found")]
     UserNotFound,
+    #[error("Game not found")]
+    GameNotFound,
     #[error("Invalid first name: The first name must be between 1 and 32 characters and not contain spaces")]
     InvalidFirstName,
     #[error("Invalid last name: The last name must be between 1 and 32 characters and not contain spaces")]
@@ -113,7 +115,7 @@ impl Scribe for ApiError {
                 res.status_code(StatusCode::BAD_REQUEST);
                 crate::api::write_json_body(res, MessageSchema::new(self.to_string()));
             }
-            ApiError::UserNotFound => {
+            ApiError::UserNotFound | ApiError::GameNotFound => {
                 res.status_code(StatusCode::NOT_FOUND);
                 crate::api::write_json_body(res, MessageSchema::new(self.to_string()));
             }
