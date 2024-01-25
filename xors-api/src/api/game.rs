@@ -26,7 +26,7 @@ use uuid::Uuid;
 use std::sync::Arc;
 
 /// Get the game by uuid.
-/// 
+///
 /// **Note**: This will return the game only if it's ended.
 #[endpoint(
     operation_id = "get_game_by_uuid",
@@ -56,7 +56,7 @@ pub async fn get_game_by_uuid(
 /// Get the lastest 10 games.
 ///
 /// This endpoint will return the lastest 10 games, sorted by the creation date (newest first)
-/// 
+///
 /// **Note**: If the O player or the X player is deleted, the game will return it as deleted user, which it's uuid is `00000000-0000-0000-0000-000000000000` and username is `Deleted`.
 #[endpoint(
     operation_id = "get_lastest_games",
