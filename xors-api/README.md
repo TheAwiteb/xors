@@ -223,10 +223,12 @@ The `auto_play` event is sent to the client when the server plays for the client
 The `game_over` event is sent to the client when the game is over. The event has the following structure:
 ```json
 {
+    "uuid":"<GAME_UUID>",
     "event":"game_over",
     "data":{"winner":"<PLAYER_UUID>","reason":"<REASON>"}
 }
 ```
+- `uuid` is the UUID of the game.
 - `winner` is the UUID of the winner, if the game is a draw, the value will be `null`.
 - `reason` is the reason of the game over, checkout the [Game Over Reasons](#game-over-reasons) section for more information.
 
