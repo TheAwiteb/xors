@@ -14,13 +14,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::cmp::Ordering;
+
 use entity::prelude::*;
 use passwords::{analyzer, scorer};
 use uuid::Uuid;
 
 use crate::{
+    api::xo::PlayerData,
     errors::{ApiError, ApiResult},
-    schemas::NewUserSchema,
+    schemas::*,
 };
 
 /// Validates a user name. not the user signin, but the first name and last name.
@@ -157,4 +160,56 @@ pub async fn check_captcha_answer(
             .await?;
         Ok(())
     }
+}
+
+/// Returns the game over data for the given game
+pub(crate) fn game_over_data(
+    game_uuid: Uuid,
+    rounds_result: &RoundsResult,
+    player: &PlayerData,
+    versus_player: &PlayerData,
+) -> GameOverData {
+    match rounds_result
+        .wins(&player.symbol)
+        .cmp(&rounds_result.wins(&versus_player.symbol))
+    {
+        Ordering::Greater => {
+            GameOverData::new(game_uuid, Some(*player.uuid), GameOverReason::PlayerWon)
+        }
+        Ordering::Less => {
+            GameOverData::new(game_uuid, Some(*player.uuid), GameOverReason::PlayerWon)
+        }
+        Ordering::Equal => GameOverData::new(game_uuid, None, GameOverReason::Draw),
+    }
+}
+
+/// Check if the player played a valid move. Returns true if the move is valid, false otherwise.
+///
+/// Note: This function will send an error message to the player if the move is invalid.
+pub(crate) fn check_move_validity(board: &Board, player: &PlayerData, place: u8) -> bool {
+    if board.turn() != player.symbol {
+        log::error!("Player {} is playing while it's not his turn", player.uuid);
+
+        let _ = player.tx.send(Ok(
+            XoServerEventData::Error(ErrorData::NotYourTurn).to_message()
+        ));
+    } else if place > 8 || !board.is_empty_cell(place) {
+        log::error!(
+            "Player {} is playing in an non empty cell or invalid place",
+            player.uuid
+        );
+
+        let _ = player.tx.send(Ok(
+            XoServerEventData::Error(ErrorData::InvalidPlace).to_message()
+        ));
+    } else if board.is_end() {
+        log::error!("Player {} is playing while the round is over", player.uuid);
+
+        let _ = player.tx.send(Ok(
+            XoServerEventData::Error(ErrorData::NotYourTurn).to_message()
+        ));
+    } else {
+        return true;
+    }
+    false
 }
