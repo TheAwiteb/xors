@@ -15,7 +15,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use std::{
-    cmp::Ordering,
     collections::{HashMap, VecDeque},
     str::FromStr,
     sync::Arc,
@@ -31,7 +30,7 @@ use tokio::sync::{mpsc, RwLock};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use uuid::Uuid;
 
-use crate::{errors::ApiResult, schemas::*};
+use crate::{db_utils, errors::ApiResult, schemas::*, utils};
 
 use super::exts::*;
 
@@ -60,6 +59,14 @@ pub const WINNING_COMBINATIONS: &[(usize, usize, usize)] = &[
     (0, 4, 8), // Diagonals
     (2, 4, 6),
 ];
+
+/// Player data
+#[derive(derive_new::new)]
+pub(crate) struct PlayerData {
+    pub uuid: Arc<Uuid>,
+    pub tx: Arc<mpsc::UnboundedSender<Result<Message, salvo::Error>>>,
+    pub symbol: XoSymbol,
+}
 
 #[handler]
 pub async fn user_connected(
@@ -118,23 +125,21 @@ pub async fn user_connected(
                                 event,
                                 &conn,
                                 max_online_games.as_ref(),
-                                *move_period.as_ref(),
+                                *move_period,
                                 tx.clone(),
                                 user_uuid.clone(),
                             )
                             .await
                             {
-                                let _ = tx.send(
-                                    XoServerEventData::Error(ErrorData::Other(err.to_string()))
-                                        .into(),
-                                );
+                                tx.send_server_event(XoServerEventData::Error(ErrorData::Other(
+                                    err.to_string(),
+                                )));
                             }
                         } else {
-                            let _ =
-                                tx.send(XoServerEventData::Error(ErrorData::UnknownEvent).into());
+                            tx.send_server_event(XoServerEventData::Error(ErrorData::UnknownEvent));
                         }
                     } else {
-                        let _ = tx.send(XoServerEventData::Error(ErrorData::InvalidBody).into());
+                        tx.send_server_event(XoServerEventData::Error(ErrorData::InvalidBody));
                     }
                 }
 
@@ -165,7 +170,7 @@ async fn handle_event(
             play(conn, (user, tx), place, move_period).await?
         }
         _ => {
-            let _ = tx.send(XoServerEventData::Error(ErrorData::InvalidBody).into());
+            tx.send_server_event(XoServerEventData::Error(ErrorData::InvalidBody));
         }
     }
 
@@ -183,78 +188,64 @@ async fn search_for_game(
 
     if ONLINE_GAMES.is_user_in_game(&player.0).await {
         log::error!("Player {} is already in a game", player.0);
-        let _ = player
+        player
             .1
-            .send(XoServerEventData::Error(ErrorData::AlreadyInGame).into());
+            .send_server_event(XoServerEventData::Error(ErrorData::AlreadyInGame));
     } else if &ONLINE_GAMES.online_games_count().await >= max_online_games {
         log::error!(
             "Player {} can't join the game because the max online games is reached",
             player.0
         );
-        let _ = player
+        player
             .1
-            .send(XoServerEventData::Error(ErrorData::MaxGamesReached).into());
+            .send_server_event(XoServerEventData::Error(ErrorData::MaxGamesReached));
     } else if SEARCH_FOR_GAME.is_user_in_search(player.0.as_ref()).await {
         log::error!("Player {} is already in the search queue", player.0);
-        let _ = player
+        player
             .1
-            .send(XoServerEventData::Error(ErrorData::AlreadyInSearch).into());
+            .send_server_event(XoServerEventData::Error(ErrorData::AlreadyInSearch));
     } else if SEARCH_FOR_GAME.search_users_count().await > 0 {
         let Some(other_player) = SEARCH_FOR_GAME.pop_front().await else {
             unreachable!("The search queue is not empty")
         };
+        let player = PlayerData::new(player.0, player.1, XoSymbol::O);
+        let other_player = PlayerData::new(other_player.0, other_player.1, XoSymbol::X);
 
         log::info!(
             "Player {} found a game with player {}",
-            player.0,
-            other_player.0
+            player.uuid,
+            other_player.uuid
         );
 
-        let now = chrono::Utc::now().naive_utc();
-        let game = GameActiveModel {
-            uuid: Set(Uuid::new_v4()),
-            round: Set(1i16),
-            auto_play_after: Set(Some(now + Duration::seconds(move_period))),
-            rounds_result: Set(RoundsResult::default().to_string()),
-            x_player: Set(*other_player.0.as_ref()),
-            o_player: Set(*player.0.as_ref()),
-            board: Set(Board::default().to_string()),
-            winner: Set(None),
-            reason: Set(None),
-            created_at: Set(now),
-            ..Default::default()
-        }
-        .save(conn)
-        .await?;
+        let game =
+            db_utils::create_game(conn, *other_player.uuid, *player.uuid, move_period).await?;
 
         ONLINE_GAMES
-            .add_game(*game.uuid.as_ref(), other_player.clone(), player.clone())
-            .await;
-
-        ONLINE_GAMES
-            .broadcast_message(
+            .add_game(
                 *game.uuid.as_ref(),
-                XoServerEventData::GameFound {
-                    x_player: *other_player.0.as_ref(),
-                    o_player: *player.0.as_ref(),
-                }
-                .to_message(),
+                (other_player.uuid.clone(), other_player.tx.clone()),
+                (player.uuid.clone(), player.tx.clone()),
             )
             .await;
 
         ONLINE_GAMES
-            .broadcast_message(
+            .broadcast_messages(
                 *game.uuid.as_ref(),
-                XoServerEventData::RoundStart { round: 1 }.to_message(),
+                &[
+                    XoServerEventData::GameFound {
+                        x_player: *other_player.uuid,
+                        o_player: *player.uuid,
+                    },
+                    XoServerEventData::RoundStart { round: 1 },
+                ],
             )
             .await;
 
-        let _ = other_player.1.send(
-            XoServerEventData::YourTurn {
+        other_player
+            .tx
+            .send_server_event(XoServerEventData::YourTurn {
                 auto_play_after: game.auto_play_after.as_ref().unwrap().timestamp(),
-            }
-            .into(),
-        );
+            });
     } else {
         log::info!("Player {} is added to the search queue", player.0);
         SEARCH_FOR_GAME.add_user(player).await;
@@ -273,152 +264,98 @@ async fn play(
     if let Some((game_uuid, versus_player)) = ONLINE_GAMES.get_user_game(&player.0).await {
         log::info!("Player {} is playing in place {}", player.0, place);
 
-        let mut game = GameEntity::find()
-            .filter(GameColumn::Uuid.eq(game_uuid))
-            .one(conn)
-            .await?
-            .expect("The game is in the online games so it should be here");
+        let mut game = db_utils::get_game::<false>(conn, &game_uuid).await?;
         let mut board = Board::from_str(&game.board).expect("The board is valid");
-
-        let (player_symbol, versus_symbol) = if game.x_player == *player.0.as_ref() {
+        let (player_symbol, versus_symbol) = if game.x_player == *player.0 {
             (XoSymbol::X, XoSymbol::O)
         } else {
             (XoSymbol::O, XoSymbol::X)
         };
 
-        if board.turn() != player_symbol {
-            log::error!("Player {} is playing while it's not his turn", player.0);
+        let player = PlayerData::new(player.0, player.1, player_symbol);
+        let versus_player = PlayerData::new(versus_player.0, versus_player.1, versus_symbol);
 
-            let _ = player.1.send(Ok(
-                XoServerEventData::Error(ErrorData::NotYourTurn).to_message()
-            ));
-        } else if place > 8 || !board.is_empty_cell(place) {
-            log::error!(
-                "Player {} is playing in an non empty cell or invalid place",
-                player.0
-            );
-
-            let _ = player.1.send(Ok(
-                XoServerEventData::Error(ErrorData::InvalidPlace).to_message()
-            ));
-        } else if board.is_draw() || board.is_win(XoSymbol::X) || board.is_win(XoSymbol::O) {
-            log::error!("Player {} is playing while the round is over", player.0);
-
-            let _ = player.1.send(Ok(
-                XoServerEventData::Error(ErrorData::NotYourTurn).to_message()
-            ));
-        } else {
-            let _ = versus_player
-                .1
-                .send(XoServerEventData::Play(PlayData::new(place, *player.0.as_ref())).into());
+        if utils::check_move_validity(&board, &player, place) {
+            versus_player
+                .tx
+                .send_server_event(XoServerEventData::Play(PlayData::new(place, *player.uuid)));
             game.auto_play_after =
                 Some((chrono::Utc::now() + Duration::seconds(move_period)).naive_utc());
-            board.set_cell(place, player_symbol);
+            board.set_cell(place, player.symbol);
             let mut rounds_result =
                 RoundsResult::from_str(&game.rounds_result).expect("The rounds result is valid");
 
-            if board.is_win(player_symbol) {
-                log::info!("Player {} won the round {}", player.0, game.round);
-                rounds_result.add_win(player_symbol);
+            if board.is_win(&player.symbol) {
+                log::info!("Player {} won the round {}", player.uuid, game.round);
+                rounds_result.add_win(&player.symbol);
             } else if board.is_draw() {
                 log::info!("The round {} is a draw", game.round);
                 rounds_result.draws += 1;
             }
 
-            // Check if the game is over
-            if game.round == 3 && board.is_end() {
-                let game_over_data = match rounds_result
-                    .wins(player_symbol)
-                    .cmp(&rounds_result.wins(versus_symbol))
-                {
-                    Ordering::Greater => {
-                        GameOverData::new(Some(*player.0.as_ref()), GameOverReason::PlayerWon)
-                    }
-                    Ordering::Less => GameOverData::new(
-                        Some(*versus_player.0.as_ref()),
-                        GameOverReason::PlayerWon,
-                    ),
-                    Ordering::Equal => GameOverData::new(None, GameOverReason::Draw),
-                };
-
-                ONLINE_GAMES
-                    .broadcast_message(
-                        game.uuid,
-                        XoServerEventData::GameOver(game_over_data.clone()).to_message(),
-                    )
-                    .await;
-
-                rounds_result.add_board(board.clone());
-                game.winner = game_over_data.winner;
-                game.reason = Some(game_over_data.reason.to_string());
-                ONLINE_GAMES.remove_game(conn, &game_uuid).await?;
-            } else if game.round == 2
-                && (rounds_result.x_player == 2 || rounds_result.o_player == 2)
+            // Check if the game is over.
+            // Game is over when the board is end and the round is 3 or the round is 2 and one of the players won 2 rounds.
+            if board.is_end()
+                && (game.round == 3
+                    || (game.round == 2
+                        && (rounds_result.x_player == 2 || rounds_result.o_player == 2)))
             {
-                let game_over_data = GameOverData::new(
-                    Some(if rounds_result.wins(player_symbol) == 2 {
-                        *player.0.as_ref()
-                    } else {
-                        *versus_player.0.clone().as_ref()
-                    }),
-                    GameOverReason::PlayerWon,
-                );
+                rounds_result.add_board(board.clone());
+                let game_over_data =
+                    utils::game_over_data(game.uuid, &rounds_result, &player, &versus_player);
+
                 ONLINE_GAMES
                     .broadcast_message(
                         game.uuid,
-                        XoServerEventData::GameOver(game_over_data.clone()).to_message(),
+                        XoServerEventData::GameOver(game_over_data.clone()),
                     )
                     .await;
-
-                rounds_result.add_board(board.clone());
-                game.winner = game_over_data.winner;
-                game.reason = Some(game_over_data.reason.to_string());
-                ONLINE_GAMES.remove_game(conn, &game_uuid).await?;
+                ONLINE_GAMES
+                    .remove_game(
+                        conn,
+                        &game.uuid,
+                        game_over_data.winner,
+                        &game_over_data.reason,
+                    )
+                    .await?;
             } else if board.is_end() {
                 // ^^ Check if the round is over
                 rounds_result.add_board(board.clone());
                 ONLINE_GAMES
-                    .broadcast_message(
+                    .broadcast_messages(
                         game.uuid,
-                        XoServerEventData::RoundEnd(RoundData::new(
-                            game.round,
-                            if board.is_win(player_symbol) {
-                                Some(*player.0.as_ref())
-                            } else {
-                                None
+                        &[
+                            XoServerEventData::RoundEnd(RoundData::new(
+                                game.round,
+                                if board.is_win(&player.symbol) {
+                                    Some(*player.uuid)
+                                } else {
+                                    None
+                                },
+                            )),
+                            XoServerEventData::RoundStart {
+                                round: game.round + 1,
                             },
-                        ))
-                        .to_message(),
-                    )
-                    .await;
-                ONLINE_GAMES
-                    .broadcast_message(
-                        game.uuid,
-                        XoServerEventData::RoundStart {
-                            round: game.round + 1,
-                        }
-                        .to_message(),
+                        ],
                     )
                     .await;
 
                 board = Board::default();
                 game.round += 1;
-                let data = Ok((XoServerEventData::YourTurn {
+                let data = XoServerEventData::YourTurn {
                     auto_play_after: game.auto_play_after.unwrap().timestamp(),
-                })
-                .to_message());
-                if player_symbol == XoSymbol::X {
-                    let _ = player.1.send(data);
+                };
+                if player.symbol == XoSymbol::X {
+                    player.tx.send_server_event(data);
                 } else {
-                    let _ = versus_player.1.send(data);
+                    versus_player.tx.send_server_event(data);
                 }
             } else {
-                let _ = versus_player.1.send(
-                    XoServerEventData::YourTurn {
+                versus_player
+                    .tx
+                    .send_server_event(XoServerEventData::YourTurn {
                         auto_play_after: game.auto_play_after.unwrap().timestamp(),
-                    }
-                    .into(),
-                );
+                    });
             }
 
             let mut game = game.into_active_model();
@@ -426,14 +363,12 @@ async fn play(
             game.rounds_result = Set(rounds_result.to_string());
             game.round = Set(game.round.unwrap());
             game.auto_play_after = Set(game.auto_play_after.unwrap());
-            game.winner = Set(game.winner.unwrap());
-            game.reason = Set(game.reason.unwrap());
             game.save(conn).await?;
         }
     } else {
-        let _ = player.1.send(Ok(
-            XoServerEventData::Error(ErrorData::NotInGame).to_message()
-        ));
+        player
+            .1
+            .send_server_event(XoServerEventData::Error(ErrorData::NotInGame));
     }
     Ok(())
 }
@@ -446,24 +381,22 @@ async fn player_disconnected(conn: &sea_orm::DatabaseConnection, player: Player)
     if let Some((game_uuid, versus_player)) = ONLINE_GAMES.get_user_game(&player.0).await {
         log::info!("Player {} disconnected while in a game", player.0);
 
-        let game = GameEntity::find()
-            .filter(GameColumn::Uuid.eq(game_uuid))
-            .one(conn)
-            .await?
-            .expect("The game is in the online games so it should be here");
-        let mut game = game.into_active_model();
-        game.winner = Set(Some(*versus_player.0.as_ref()));
-        game.reason = Set(Some(GameOverReason::PlayerDisconnected.to_string()));
-        game.save(conn).await?;
-        let _ = versus_player.1.send(
-            XoServerEventData::GameOver(GameOverData::new(
-                Some(*versus_player.0.as_ref()),
+        versus_player
+            .1
+            .send_server_event(XoServerEventData::GameOver(GameOverData::new(
+                game_uuid,
+                Some(*versus_player.0),
                 GameOverReason::PlayerDisconnected,
-            ))
-            .into(),
-        );
-        ONLINE_GAMES.remove_game(conn, &game_uuid).await?;
-    } else {
+            )));
+        ONLINE_GAMES
+            .remove_game(
+                conn,
+                &game_uuid,
+                Some(*versus_player.0),
+                &GameOverReason::PlayerDisconnected,
+            )
+            .await?;
+    } else if SEARCH_FOR_GAME.is_user_in_search(player.0.as_ref()).await {
         // ^ If the player disconnected while searching for a game, then remove him from the search queue.
         log::info!(
             "Player {} disconnected while searching for a game",
@@ -476,7 +409,6 @@ async fn player_disconnected(conn: &sea_orm::DatabaseConnection, player: Player)
 }
 
 /// Auto play handler.
-
 /// ### Note
 /// This function will run while there is at least one online game, if not then it will wait 5 seconds and check again.
 pub async fn auto_play_handler(conn: sea_orm::DatabaseConnection, move_period: i64) {
@@ -484,14 +416,7 @@ pub async fn auto_play_handler(conn: sea_orm::DatabaseConnection, move_period: i
         log::info!("Starting auto play handler");
 
         loop {
-            let games = GameEntity::find()
-                .filter(
-                    GameColumn::EndedAt
-                        .is_null()
-                        .and(GameColumn::AutoPlayAfter.is_not_null()),
-                )
-                .all(conn)
-                .await?;
+            let games = db_utils::get_online_games(conn).await?;
             if !games.is_empty() {
                 for game in games {
                     if let Some(auto_play_after) = game.auto_play_after {
@@ -513,7 +438,9 @@ pub async fn auto_play_handler(conn: sea_orm::DatabaseConnection, move_period: i
                             .expect("There is at least one empty cell, if the board is full then the game should be ended")
                             .to_owned();
 
-                            let _ = player.1.send(XoServerEventData::AutoPlay { place }.into());
+                            player
+                                .1
+                                .send_server_event(XoServerEventData::AutoPlay { place });
 
                             log::info!(
                                 "Playing for player {} in game {} in place {place}",

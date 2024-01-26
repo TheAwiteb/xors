@@ -178,19 +178,39 @@ pub async fn create_captcha(
 }
 
 /// End a game in the database. This will set the `ended_at` column to the current time and remove the `board` column.
-pub async fn end_game(conn: &sea_orm::DatabaseConnection, game_uuid: &Uuid) -> ApiResult<()> {
+pub async fn end_game(
+    conn: &sea_orm::DatabaseConnection,
+    game_uuid: &Uuid,
+    winner: Option<Uuid>,
+    reason: &GameOverReason,
+) -> ApiResult<()> {
     log::info!("Ending game: {}", game_uuid);
 
-    if let Some(mut game) = GameEntity::find()
-        .filter(GameColumn::Uuid.eq(*game_uuid))
-        .one(conn)
-        .await?
-        .map(IntoActiveModel::into_active_model)
-    {
-        game.ended_at = Set(Some(chrono::Utc::now().naive_utc()));
-        game.board = Set(String::new());
-        game.save(conn).await?;
+    let mut game = get_game::<false>(conn, game_uuid)
+        .await
+        .map(IntoActiveModel::into_active_model)?;
+
+    game.winner = Set(winner);
+    game.reason = Set(Some(reason.to_string()));
+    game.ended_at = Set(Some(chrono::Utc::now().naive_utc()));
+    game.board = Set(String::new());
+
+    let mut x_player = get_user(conn, *game.x_player.as_ref()).await?;
+    let mut o_player = get_user(conn, *game.o_player.as_ref()).await?;
+    if Some(*x_player.uuid.as_ref()) == winner {
+        x_player.wins = Set(x_player.wins.as_ref() + 1);
+        o_player.losts = Set(o_player.losts.as_ref() + 1);
+    } else if Some(*o_player.uuid.as_ref()) == winner {
+        o_player.wins = Set(o_player.wins.as_ref() + 1);
+        x_player.losts = Set(x_player.losts.as_ref() + 1);
+    } else {
+        x_player.draw = Set(x_player.draw.as_ref() + 1);
+        o_player.draw = Set(o_player.draw.as_ref() + 1);
     }
+
+    game.save(conn).await?;
+    x_player.save(conn).await?;
+    o_player.save(conn).await?;
 
     Ok(())
 }
@@ -235,20 +255,22 @@ pub async fn create_game(
 }
 
 /// Get a game from the database by uuid.
-///
-/// **Note**: This will return the game only if it's ended.
-pub async fn get_game(
+pub async fn get_game<const IS_END: bool>(
     conn: &sea_orm::DatabaseConnection,
     game_uuid: &Uuid,
 ) -> ApiResult<GameModel> {
     log::info!("Getting game: {}", game_uuid);
 
     GameEntity::find()
-        .filter(
+        .filter(if IS_END {
             GameColumn::Uuid
                 .eq(*game_uuid)
-                .and(GameColumn::EndedAt.is_not_null()),
-        )
+                .and(GameColumn::EndedAt.is_not_null())
+        } else {
+            GameColumn::Uuid
+                .eq(*game_uuid)
+                .and(GameColumn::EndedAt.is_null())
+        })
         .one(conn)
         .await?
         .ok_or(ApiError::GameNotFound)

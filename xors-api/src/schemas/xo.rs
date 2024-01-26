@@ -304,7 +304,7 @@ mod api {
 
     impl RoundsResult {
         /// Returns the wins of the symbol.
-        pub fn wins(&self, symbol: XoSymbol) -> usize {
+        pub fn wins(&self, symbol: &XoSymbol) -> usize {
             match symbol {
                 XoSymbol::X => self.x_player,
                 XoSymbol::O => self.o_player,
@@ -312,7 +312,7 @@ mod api {
         }
 
         /// Add a win to the symbol.
-        pub fn add_win(&mut self, symbol: XoSymbol) {
+        pub fn add_win(&mut self, symbol: &XoSymbol) {
             match symbol {
                 XoSymbol::X => self.x_player += 1,
                 XoSymbol::O => self.o_player += 1,
@@ -327,7 +327,7 @@ mod api {
         /// - Panics if the board is not end. will check if the board is end by calling `is_end` method.
         pub fn add_board(&mut self, board: Board) {
             let index = self.x_player + self.o_player + self.draws;
-            assert!(index < 3, "The total rounds is more than 3");
+            assert!(index <= 3, "The total rounds is more than 3");
             assert!(board.is_end(), "The board is not end");
             self.boards.push(board);
         }
@@ -365,7 +365,7 @@ mod api {
         /// Check if the board is end.
         /// The board is draw or someone won.
         pub fn is_end(&self) -> bool {
-            self.is_draw() || self.is_win(XoSymbol::X) || self.is_win(XoSymbol::O)
+            self.is_draw() || self.is_win(&XoSymbol::X) || self.is_win(&XoSymbol::O)
         }
 
         /// Returns the symbol turn.
@@ -384,17 +384,17 @@ mod api {
 
         /// Check if the board is a draw.
         pub fn is_draw(&self) -> bool {
-            self.is_full() && !self.is_win(XoSymbol::X) && !self.is_win(XoSymbol::O)
+            self.is_full() && !self.is_win(&XoSymbol::X) && !self.is_win(&XoSymbol::O)
         }
 
         /// Check if the symbol is win.
-        pub fn is_win(&self, symbol: XoSymbol) -> bool {
+        pub fn is_win(&self, symbol: &XoSymbol) -> bool {
             crate::api::xo::WINNING_COMBINATIONS
                 .iter()
                 .any(|&(a, b, c)| {
-                    self.cells[a] == Some(symbol)
-                        && self.cells[b] == Some(symbol)
-                        && self.cells[c] == Some(symbol)
+                    self.cells[a].as_ref() == Some(symbol)
+                        && self.cells[b].as_ref() == Some(symbol)
+                        && self.cells[c].as_ref() == Some(symbol)
                 })
         }
     }

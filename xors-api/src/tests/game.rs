@@ -52,7 +52,7 @@ mod get_game {
         let game = db_utils::create_game(&conn, player_x.uuid, player_o.uuid, 10)
             .await
             .expect("Failed to create game");
-        db_utils::end_game(&conn, game.uuid.as_ref())
+        db_utils::end_game(&conn, game.uuid.as_ref(), None, &GameOverReason::Draw)
             .await
             .expect("Failed to end game");
 
@@ -135,12 +135,34 @@ mod get_game {
         .await
         .expect("Failed to create player x");
 
-        let game = db_utils::create_game(&conn, player_x.uuid, Uuid::new_v4(), 10)
+        let player_o = db_utils::create_user(
+            &conn,
+            NewUserSchema {
+                username: "deleted_user_o_player".to_owned(),
+                first_name: "Player".to_owned(),
+                password: "fdkDFLKJL4859#$&".to_owned(),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("Failed to create player o");
+
+        let game = db_utils::create_game(&conn, player_x.uuid, player_o.uuid, 10)
             .await
             .expect("Failed to create game");
-        db_utils::end_game(&conn, game.uuid.as_ref())
+        db_utils::end_game(&conn, game.uuid.as_ref(), None, &GameOverReason::Draw)
             .await
             .expect("Failed to end game");
+
+        UserEntity::delete(
+            db_utils::get_user(&conn, player_o.uuid)
+                .await
+                .expect("Failed to get user")
+                .into_active_model(),
+        )
+        .exec(&conn)
+        .await
+        .expect("Failed to delete user");
 
         let mut res = send(
             &service,
@@ -223,16 +245,40 @@ mod lastest_games {
         let service = get_service().await.expect("Failed to get service");
         let conn = get_connection().await.expect("Failed to get connection");
 
-        let game1 = db_utils::create_game(&conn, Uuid::new_v4(), Uuid::new_v4(), 10)
+        let player_x = db_utils::create_user(
+            &conn,
+            NewUserSchema {
+                username: "lastest_games_x_player".to_owned(),
+                first_name: "Player".to_owned(),
+                password: "fdkDFLKJL4859#$&".to_owned(),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("Failed to create player x");
+
+        let player_o = db_utils::create_user(
+            &conn,
+            NewUserSchema {
+                username: "lastest_games_o_player".to_owned(),
+                first_name: "Player".to_owned(),
+                password: "fdkDFLKJL4859#$&".to_owned(),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("Failed to create player o");
+
+        let game1 = db_utils::create_game(&conn, player_x.uuid, player_o.uuid, 10)
             .await
             .expect("Failed to create game");
-        let game2 = db_utils::create_game(&conn, Uuid::new_v4(), Uuid::new_v4(), 10)
+        let game2 = db_utils::create_game(&conn, player_x.uuid, player_o.uuid, 10)
             .await
             .expect("Failed to create game");
-        db_utils::end_game(&conn, game1.uuid.as_ref())
+        db_utils::end_game(&conn, game1.uuid.as_ref(), None, &GameOverReason::Draw)
             .await
             .expect("Failed to end game");
-        db_utils::end_game(&conn, game2.uuid.as_ref())
+        db_utils::end_game(&conn, game2.uuid.as_ref(), None, &GameOverReason::Draw)
             .await
             .expect("Failed to end game");
 
@@ -262,13 +308,37 @@ mod lastest_games {
         let service = get_service().await.expect("Failed to get service");
         let conn = get_connection().await.expect("Failed to get connection");
 
-        let game1 = db_utils::create_game(&conn, Uuid::new_v4(), Uuid::new_v4(), 10)
+        let player_x = db_utils::create_user(
+            &conn,
+            NewUserSchema {
+                username: "unend_games_x_player".to_owned(),
+                first_name: "Player".to_owned(),
+                password: "fdkDFLKJL4859#$&".to_owned(),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("Failed to create player x");
+
+        let player_o = db_utils::create_user(
+            &conn,
+            NewUserSchema {
+                username: "unend_games_o_player".to_owned(),
+                first_name: "Player".to_owned(),
+                password: "fdkDFLKJL4859#$&".to_owned(),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("Failed to create player o");
+
+        let game1 = db_utils::create_game(&conn, player_x.uuid, player_o.uuid, 10)
             .await
             .expect("Failed to create game");
         let game2 = db_utils::create_game(&conn, Uuid::new_v4(), Uuid::new_v4(), 10)
             .await
             .expect("Failed to create game");
-        db_utils::end_game(&conn, game1.uuid.as_ref())
+        db_utils::end_game(&conn, game1.uuid.as_ref(), None, &GameOverReason::Draw)
             .await
             .expect("Failed to end game");
 

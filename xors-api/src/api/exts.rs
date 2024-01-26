@@ -14,18 +14,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::collections::VecDeque;
+use std::{collections::VecDeque, sync::Arc};
 
 use easy_ext::ext;
 use entity::prelude::*;
 use salvo::{prelude::*, websocket::Message};
 use sea_orm::DatabaseConnection;
-use tokio::sync::RwLock;
+use tokio::sync::{mpsc::UnboundedSender, RwLock};
 use uuid::Uuid;
 
 use crate::{
     db_utils,
     errors::{ApiError, ApiResult},
+    schemas::{GameOverReason, XoServerEventData},
 };
 
 use super::{jwt::JwtClaims, xo::Player};
@@ -65,12 +66,16 @@ impl RwLock<super::xo::Games> {
         self.write().await.insert(game_uuid, (player1, player2));
     }
 
+    /// This will remove the game from the database and the in-memory map.
+    /// So if there is brodcast you should do it before calling this function.
     pub(crate) async fn remove_game(
         &self,
         conn: &sea_orm::DatabaseConnection,
         game_uuid: &Uuid,
+        winner: Option<Uuid>,
+        win_reason: &GameOverReason,
     ) -> ApiResult<()> {
-        db_utils::end_game(conn, game_uuid).await?;
+        db_utils::end_game(conn, game_uuid, winner, win_reason).await?;
         self.write().await.remove(game_uuid);
         Ok(())
     }
@@ -95,13 +100,17 @@ impl RwLock<VecDeque<Player>> {
 
 #[ext(ReadGamesExt)]
 impl RwLock<super::xo::Games> {
-    pub(crate) async fn broadcast_message(&self, game_uuid: Uuid, message: Message) {
-        let read_guard = self.read().await;
-        let (player1, player2) = read_guard
-            .get(&game_uuid)
-            .expect("The game uuid should be exist");
-        let _ = player1.1.send(Ok(message.clone()));
-        let _ = player2.1.send(Ok(message));
+    pub(crate) async fn broadcast_messages(&self, game_uuid: Uuid, messages: &[XoServerEventData]) {
+        if let Some((player1, player2)) = self.get_game_players(&game_uuid).await {
+            messages.iter().for_each(|event| {
+                player1.1.send_server_event(event.clone());
+                player2.1.send_server_event(event.clone());
+            })
+        }
+    }
+
+    pub(crate) async fn broadcast_message(&self, game_uuid: Uuid, message: XoServerEventData) {
+        self.broadcast_messages(game_uuid, &[message]).await;
     }
 
     pub(crate) async fn get_user_game(&self, user_uuid: &Uuid) -> Option<(Uuid, Player)> {
@@ -148,5 +157,12 @@ impl RwLock<VecDeque<Player>> {
 
     pub(crate) async fn search_users_count(&self) -> usize {
         self.read().await.len()
+    }
+}
+
+#[ext(SendServerEventExt)]
+impl Arc<UnboundedSender<Result<Message, salvo::Error>>> {
+    pub(crate) fn send_server_event(&self, event: XoServerEventData) {
+        let _ = self.send(Ok(event.to_message()));
     }
 }

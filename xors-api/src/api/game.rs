@@ -48,9 +48,12 @@ pub async fn get_game_by_uuid(
 ) -> ApiResult<Json<GameSchema>> {
     let conn = depot.obtain::<Arc<DatabaseConnection>>().unwrap().as_ref();
 
-    GameSchema::from_game(conn, db_utils::get_game(conn, &uuid.into_inner()).await?)
-        .await
-        .map(Json)
+    GameSchema::from_game(
+        conn,
+        db_utils::get_game::<true>(conn, &uuid.into_inner()).await?,
+    )
+    .await
+    .map(Json)
 }
 
 /// Get the lastest 10 games.
