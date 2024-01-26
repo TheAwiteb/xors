@@ -124,6 +124,8 @@ mod websocket {
     /// The Xo game over data.
     #[derive(Serialize, Deserialize, Clone, Debug, derive_new::new)]
     pub struct GameOverData {
+        /// The game uuid.
+        pub uuid: Uuid,
         /// The winner. if the winner is None, then the game is a draw.
         pub winner: Option<Uuid>,
         /// The game over reason.
