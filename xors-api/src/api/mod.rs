@@ -182,6 +182,7 @@ pub fn service(
                     Router::with_path("user")
                         .put(user::update_user)
                         .delete(user::delete_user)
+                        .push(Router::with_path("reset_password").post(user::reset_user_password))
                         .push(Router::with_path("me").get(user::get_me)),
                 )
                 .push(Router::with_path("xo").goal(xo::user_connected)),
