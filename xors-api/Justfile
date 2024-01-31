@@ -21,6 +21,11 @@ run:
     docker-compose up -d db
     RUST_LOG=debug cargo dotenv -e .env.dev -- run --bin api
 
+# Generate the openapi file
+gen-openapi:
+    docker-compose up -d db
+    RUST_LOG=debug cargo dotenv -e .env.dev -- run --bin generate-openapi -- ./openapi.json
+
 # Run the CI (Local use only)
 @ci:
     cargo +stable dotenv -e .env.dev -- build -q
@@ -37,6 +42,7 @@ msrv:
     cargo +{{msrv}} dotenv -e .env.dev -- build -q
     echo "MSRV is correct"
 
+# Install the required tools
 install-tools:
     cargo install cargo-dotenv
     cargo install cargo-nextest
