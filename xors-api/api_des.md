@@ -6,7 +6,11 @@ We use JWT for authentication and authorization in XORS. The JWT token is genera
 
 #### Captcha
 
-When you signup to XORS, you need to get the captcha from `/auth/captcha` it's returns a captcha token and captcha image (base64 encoded). You need to send the captcha token and captcha code to `/auth/signup` to signup to XORS. The captcha token is **valid for 5 minutes**, if the captcha token is expired, you need to get a new captcha token. The captcha token can be **used only once**.
+When you signup or signin to XORS, you need to get the captcha from `/auth/captcha` it's returns a captcha token and captcha image (base64 encoded). You need to send the captcha token and captcha answer to the endpoint in the header. The captcha token is **valid for 5 minutes**, if the captcha token is expired, you need to get a new captcha token. The captcha token can be **used only once**.
+
+##### The required headers
+- `X-Captcha-Token`: The captcha token.
+- `X-Captcha-Answer`: The captcha answer.
 
 #### Rate Limit
 
