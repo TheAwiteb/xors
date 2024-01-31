@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::*;
+include!("mod.rs");
 
 #[cfg(test)]
 mod signup {
@@ -424,7 +424,7 @@ mod signin {
         let service = get_service().await.expect("Failed to get service");
         let conn = get_connection().await.expect("Failed to get connection");
 
-        let user = crate::db_utils::create_user(
+        let user = xors_api::db_utils::create_user(
             &conn,
             NewUserSchema {
                 first_name: "First".to_owned(),
@@ -474,7 +474,7 @@ mod signin {
         let service = get_service().await.expect("Failed to get service");
         let conn = get_connection().await.expect("Failed to get connection");
 
-        crate::db_utils::create_user(
+        xors_api::db_utils::create_user(
             &conn,
             NewUserSchema {
                 first_name: "First".to_owned(),
@@ -512,7 +512,7 @@ mod signin {
         let service = get_service().await.expect("Failed to get service");
         let conn = get_connection().await.expect("Failed to get connection");
 
-        let user = crate::db_utils::create_user(
+        let user = xors_api::db_utils::create_user(
             &conn,
             NewUserSchema {
                 first_name: "First".to_owned(),
@@ -580,7 +580,7 @@ mod refresh {
         let conn = get_connection().await.expect("Failed to get connection");
         let secret_key = get_secret_key();
 
-        let user = crate::db_utils::create_user(
+        let user = xors_api::db_utils::create_user(
             &conn,
             NewUserSchema {
                 first_name: "First".to_owned(),
@@ -592,7 +592,7 @@ mod refresh {
         .await
         .expect("Failed to create user");
 
-        let (jwt, refresh_token) = crate::db_utils::signin_user(user.clone(), &secret_key)
+        let (jwt, refresh_token) = xors_api::db_utils::signin_user(user.clone(), &secret_key)
             .await
             .map(|user| (user.jwt, user.refresh_token))
             .expect("Failed to signin user");
@@ -648,7 +648,7 @@ mod refresh {
         let conn = get_connection().await.expect("Failed to get connection");
         let secret_key = get_secret_key();
 
-        let user = crate::db_utils::create_user(
+        let user = xors_api::db_utils::create_user(
             &conn,
             NewUserSchema {
                 first_name: "First".to_owned(),
@@ -660,7 +660,7 @@ mod refresh {
         .await
         .expect("Failed to create user");
 
-        let refresh_token = crate::db_utils::signin_user(user.clone(), &secret_key)
+        let refresh_token = xors_api::db_utils::signin_user(user.clone(), &secret_key)
             .await
             .map(|user| user.refresh_token)
             .expect("Failed to signin user");
@@ -691,7 +691,7 @@ mod refresh {
         let conn = get_connection().await.expect("Failed to get connection");
         let secret_key = get_secret_key();
 
-        let user = crate::db_utils::create_user(
+        let user = xors_api::db_utils::create_user(
             &conn,
             NewUserSchema {
                 first_name: "First".to_owned(),
@@ -703,7 +703,7 @@ mod refresh {
         .await
         .expect("Failed to create user");
 
-        let refresh_token = crate::db_utils::signin_user(user.clone(), &secret_key)
+        let refresh_token = xors_api::db_utils::signin_user(user.clone(), &secret_key)
             .await
             .map(|user| user.refresh_token)
             .expect("Failed to signin user");
@@ -798,7 +798,7 @@ mod refresh {
         let conn = get_connection().await.expect("Failed to get connection");
         let secret_key = get_secret_key();
 
-        let user = crate::db_utils::create_user(
+        let user = xors_api::db_utils::create_user(
             &conn,
             NewUserSchema {
                 first_name: "First".to_owned(),
@@ -810,7 +810,7 @@ mod refresh {
         .await
         .expect("Failed to create user");
 
-        let jwt = crate::db_utils::signin_user(user.clone(), &secret_key)
+        let jwt = xors_api::db_utils::signin_user(user.clone(), &secret_key)
             .await
             .map(|user| user.jwt)
             .expect("Failed to signin user");

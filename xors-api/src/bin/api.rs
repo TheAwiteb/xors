@@ -16,23 +16,9 @@
 
 use std::env;
 
-use base64::engine::GeneralPurpose;
 use migration::{Migrator, MigratorTrait};
 use salvo::prelude::*;
-
-pub mod api;
-pub mod db_utils;
-pub mod errors;
-pub mod schemas;
-pub mod utils;
-
-#[cfg(test)]
-mod tests;
-
-pub const BASE_64_ENGINE: GeneralPurpose = GeneralPurpose::new(
-    &base64::alphabet::STANDARD,
-    base64::engine::general_purpose::PAD,
-);
+use xors_api::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -65,7 +51,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::info!("Starting API on http://{host}:{port}");
     log::info!("XO websocket is available at ws://{host}:{port}/xo");
     log::info!("The OpenAPI spec is available at http://{host}:{port}/api-doc/openapi.json");
-    log::info!("The ReDoc documentation is available at http://{host}:{port}/api-doc/swagger-ui");
+    log::info!(
+        "The Swagger UI documentation is available at http://{host}:{port}/api-doc/swagger-ui"
+    );
     log::info!("Press Ctrl+C to stop the API");
 
     let server_connection = connection.clone();
@@ -74,12 +62,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await;
     let server_handler = tokio::spawn(async move {
         Server::new(acceptor)
-            .serve(api::service(
-                server_connection,
-                max_online_games,
-                move_period,
-                secret_key,
-            ))
+            .serve(api::service(server_connection, max_online_games, move_period, secret_key).0)
             .await
     });
     let auto_play_handler = tokio::spawn(async move {

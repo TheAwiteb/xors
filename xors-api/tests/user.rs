@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::*;
+include!("mod.rs");
 
 #[cfg(test)]
 mod get_me {
@@ -26,8 +26,8 @@ mod get_me {
         let conn = get_connection().await.expect("Failed to get connection");
         let secret_key = get_secret_key();
 
-        let user = crate::db_utils::signin_user(
-            crate::db_utils::create_user(
+        let user = xors_api::db_utils::signin_user(
+            xors_api::db_utils::create_user(
                 &conn,
                 NewUserSchema {
                     first_name: "First".to_string(),
@@ -73,8 +73,8 @@ mod get_me {
         let conn = get_connection().await.expect("Failed to get connection");
         let secret_key = get_secret_key();
 
-        let user = crate::db_utils::signin_user(
-            crate::db_utils::create_user(
+        let user = xors_api::db_utils::signin_user(
+            xors_api::db_utils::create_user(
                 &conn,
                 NewUserSchema {
                     first_name: "First".to_string(),
@@ -156,8 +156,8 @@ mod get_user {
         let conn = get_connection().await.expect("Failed to get connection");
         let secret_key = get_secret_key();
 
-        let user = crate::db_utils::signin_user(
-            crate::db_utils::create_user(
+        let user = xors_api::db_utils::signin_user(
+            xors_api::db_utils::create_user(
                 &conn,
                 NewUserSchema {
                     first_name: "First".to_string(),
@@ -257,8 +257,8 @@ mod update_user {
         let conn = get_connection().await.expect("Failed to get connection");
         let secret_key = get_secret_key();
 
-        let user = crate::db_utils::signin_user(
-            crate::db_utils::create_user(
+        let user = xors_api::db_utils::signin_user(
+            xors_api::db_utils::create_user(
                 &conn,
                 NewUserSchema {
                     first_name: "First".to_string(),
@@ -314,8 +314,8 @@ mod update_user {
         let conn = get_connection().await.expect("Failed to get connection");
         let secret_key = get_secret_key();
 
-        let user = crate::db_utils::signin_user(
-            crate::db_utils::create_user(
+        let user = xors_api::db_utils::signin_user(
+            xors_api::db_utils::create_user(
                 &conn,
                 NewUserSchema {
                     first_name: "First".to_string(),
@@ -372,8 +372,8 @@ mod update_user {
         let conn = get_connection().await.expect("Failed to get connection");
         let secret_key = get_secret_key();
 
-        let user = crate::db_utils::signin_user(
-            crate::db_utils::create_user(
+        let user = xors_api::db_utils::signin_user(
+            xors_api::db_utils::create_user(
                 &conn,
                 NewUserSchema {
                     first_name: "First".to_string(),
@@ -484,8 +484,8 @@ mod update_user {
         let conn = get_connection().await.expect("Failed to get connection");
         let secret_key = get_secret_key();
 
-        let user = crate::db_utils::signin_user(
-            crate::db_utils::create_user(
+        let user = xors_api::db_utils::signin_user(
+            xors_api::db_utils::create_user(
                 &conn,
                 NewUserSchema {
                     first_name: "First".to_string(),
@@ -594,8 +594,8 @@ mod update_user {
         let conn = get_connection().await.expect("Failed to get connection");
         let secret_key = get_secret_key();
 
-        let user = crate::db_utils::signin_user(
-            crate::db_utils::create_user(
+        let user = xors_api::db_utils::signin_user(
+            xors_api::db_utils::create_user(
                 &conn,
                 NewUserSchema {
                     first_name: "First".to_string(),
@@ -691,8 +691,8 @@ mod update_user {
         let conn = get_connection().await.expect("Failed to get connection");
         let secret_key = get_secret_key();
 
-        let user = crate::db_utils::signin_user(
-            crate::db_utils::create_user(
+        let user = xors_api::db_utils::signin_user(
+            xors_api::db_utils::create_user(
                 &conn,
                 NewUserSchema {
                     first_name: "First".to_string(),
@@ -742,8 +742,8 @@ mod delete_user {
         let conn = get_connection().await.expect("Failed to get connection");
         let secret_key = get_secret_key();
 
-        let user = crate::db_utils::signin_user(
-            crate::db_utils::create_user(
+        let user = xors_api::db_utils::signin_user(
+            xors_api::db_utils::create_user(
                 &conn,
                 NewUserSchema {
                     first_name: "First".to_string(),
@@ -780,7 +780,7 @@ mod delete_user {
         );
 
         assert!(
-            crate::db_utils::get_user(&conn, user.user.uuid)
+            xors_api::db_utils::get_user(&conn, user.user.uuid)
                 .await
                 .is_err(),
             "User should be deleted"
@@ -793,8 +793,8 @@ mod delete_user {
         let conn = get_connection().await.expect("Failed to get connection");
         let secret_key = get_secret_key();
 
-        let user = crate::db_utils::signin_user(
-            crate::db_utils::create_user(
+        let user = xors_api::db_utils::signin_user(
+            xors_api::db_utils::create_user(
                 &conn,
                 NewUserSchema {
                     first_name: "First".to_string(),
@@ -875,8 +875,8 @@ mod delete_user {
         let conn = get_connection().await.expect("Failed to get connection");
         let secret_key = get_secret_key();
 
-        let user = crate::db_utils::signin_user(
-            crate::db_utils::create_user(
+        let user = xors_api::db_utils::signin_user(
+            xors_api::db_utils::create_user(
                 &conn,
                 NewUserSchema {
                     first_name: "First".to_string(),
@@ -916,8 +916,6 @@ mod delete_user {
 
 #[cfg(test)]
 mod reset_password {
-    use crate::db_utils;
-
     use super::*;
 
     #[tokio::test]

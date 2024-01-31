@@ -102,7 +102,7 @@ pub fn service(
     max_online_games: usize,
     move_period: i64,
     secret_key: String,
-) -> Service {
+) -> (Service, OpenApi) {
     let auth_handler: JwtAuth<jwt::JwtClaims, _> =
         JwtAuth::new(ConstDecoder::from_secret(secret_key.as_bytes()))
             .finders(vec![Box::new(
@@ -188,7 +188,7 @@ pub fn service(
                 .push(Router::with_path("xo").goal(xo::user_connected)),
         );
 
-    let doc = OpenApi::new("XORS API", env!("CARGO_PKG_VERSION"))
+    let openapi = OpenApi::new("XORS API", env!("CARGO_PKG_VERSION"))
         .info(
             Info::new("XORS API", env!("CARGO_PKG_VERSION"))
                 .description(include_str!("../../api_des.md"))
@@ -210,7 +210,7 @@ pub fn service(
         .merge_router(&router);
 
     let router = router
-        .unshift(doc.into_router("/api-doc/openapi.json"))
+        .unshift(openapi.clone().into_router("/api-doc/openapi.json"))
         .unshift(
             SwaggerUi::new("/api-doc/openapi.json")
                 .title("XORS - Swagger Ui")
@@ -235,9 +235,12 @@ pub fn service(
         }
     });
 
-    Service::new(router).catcher(
-        Catcher::default()
-            .hoop(handle404)
-            .hoop(handle_server_errors),
+    (
+        Service::new(router).catcher(
+            Catcher::default()
+                .hoop(handle404)
+                .hoop(handle_server_errors),
+        ),
+        openapi,
     )
 }
