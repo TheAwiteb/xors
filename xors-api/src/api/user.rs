@@ -178,6 +178,49 @@ pub async fn update_user(
     Ok(Json(user.into()))
 }
 
+/// Reset the user's password.
+#[endpoint(
+    operation_id = "reset_user_password",
+    tags("User"),
+    responses(
+        (status_code = 200, description = "The user's password has been reset", content_type = "application/json", body = MessageSchema),
+        (status_code = 400, description = "Incorrect old password", content_type = "application/json", body = MessageSchema),
+        (status_code = 400, description = "The password does not change", content_type = "application/json", body = MessageSchema),
+        (status_code = 400, description = "The password dose not meet the requirements", content_type = "application/json", body = MessageSchema),
+        (status_code = 400, description = "The token is not a user token", content_type = "application/json", body = MessageSchema),
+        (status_code = 401, description = "The token is expired", content_type = "application/json", body = MessageSchema),
+        (status_code = 401, description = "Unauthorized, missing JWT", content_type = "application/json", body = MessageSchema),
+        (status_code = 404, description = "User not found", content_type = "application/json", body = MessageSchema),
+        (status_code = 500, description = "Internal server error", content_type = "application/json", body = MessageSchema),
+        (status_code = 429, description = "Too many requests", content_type = "application/json", body = MessageSchema),
+    ),
+    security(("bearerAuth" = [])),
+)]
+pub async fn reset_user_password(
+    depot: &mut Depot,
+    reset_password: JsonBody<ResetPasswordSchema>,
+) -> ApiResult<Json<MessageSchema>> {
+    let conn = depot.obtain::<Arc<DatabaseConnection>>().unwrap();
+    let user = depot.user(conn.as_ref()).await?;
+    let reset_password = reset_password.into_inner();
+
+    utils::validate_password(&reset_password.new_password)?;
+    if bcrypt::verify(&reset_password.new_password, user.password_hash.as_ref())? {
+        return Err(ApiError::PasswordNotChanged);
+    }
+
+    if bcrypt::verify(&reset_password.old_password, user.password_hash.as_ref())? {
+        db_utils::reset_password(conn.as_ref(), user, &reset_password.new_password).await?;
+        Ok(Json(MessageSchema::new(
+            "The user's password has been reset".to_owned(),
+        )))
+    } else {
+        Err(ApiError::InvalidPassword(
+            "The old password is incorrect".to_owned(),
+        ))
+    }
+}
+
 /// Returns the user's profile image.
 #[endpoint(
     operation_id = "get_user_profile_image",

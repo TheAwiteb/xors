@@ -270,6 +270,22 @@ pub async fn get_online_games(conn: &sea_orm::DatabaseConnection) -> ApiResult<V
         .await?)
 }
 
+/// Reset the user's password.
+pub(crate) async fn reset_password(
+    conn: &sea_orm::DatabaseConnection,
+    user: UserModel,
+    new_password: &str,
+) -> ApiResult<()> {
+    log::info!("Resetting password for user: {}", user.username);
+    let mut user = user.into_active_model();
+
+    let password_hash = bcrypt::hash(new_password, 4)?;
+    user.password_hash = Set(password_hash);
+    user.update(conn).await?;
+
+    Ok(())
+}
+
 /// Update the user's profile image path. Returns the path of the new profile image.
 pub(crate) fn update_profile_image_path(
     user_uuid: Uuid,
