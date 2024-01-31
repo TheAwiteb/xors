@@ -113,6 +113,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: |
           cd xors-api
+          just install-tools
           just tests
 
   # JavaScript jobs
