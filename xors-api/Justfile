@@ -19,7 +19,7 @@ _default:
 # Run the API
 run:
     docker-compose up -d db
-    RUST_LOG=debug cargo dotenv -e .env.dev -- run
+    RUST_LOG=debug cargo dotenv -e .env.dev -- run --bin api
 
 # Run the CI (Local use only)
 @ci:
