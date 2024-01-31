@@ -25,7 +25,7 @@ pub struct Model {
     pub first_name: String,
     pub last_name: Option<String>,
     pub username: String,
-    pub profile_image_url: String,
+    pub profile_image_path: String,
     pub wins: i64,
     pub losts: i64,
     pub draw: i64,
