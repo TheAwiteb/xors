@@ -14,9 +14,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::fs;
+
 use crate::api::jwt::JwtClaims;
 use crate::errors::{ApiError, ApiResult};
-use crate::schemas::*;
+use crate::{schemas::*, utils};
+use base64::Engine;
 use chrono::Duration;
 use entity::prelude::*;
 use jsonwebtoken::Header;
@@ -59,10 +62,7 @@ pub async fn create_user(
             uuid: Set(uuid),
             first_name: Set(new_user.first_name),
             last_name: Set(new_user.last_name),
-            profile_image_url: Set(format!(
-                "https://api.dicebear.com/7.x/thumbs/svg?seed={}",
-                &new_user.username
-            )),
+            profile_image_path: Set("/profiles/default".to_owned()),
             username: Set(new_user.username),
             password_hash: Set(password_hash),
             created_at: Set(chrono::Utc::now().naive_utc()),
@@ -268,4 +268,30 @@ pub async fn get_online_games(conn: &sea_orm::DatabaseConnection) -> ApiResult<V
         .order_by(GameColumn::CreatedAt, Order::Desc)
         .all(conn)
         .await?)
+}
+
+/// Update the user's profile image path. Returns the path of the new profile image.
+pub(crate) fn update_profile_image_path(
+    user_uuid: Uuid,
+    profile_image: Option<String>,
+) -> ApiResult<String> {
+    log::info!("Updating profile image path");
+
+    utils::validate_user_profile_image(profile_image.as_ref())?;
+
+    let profile_image_path = if let Some(profile_image) = profile_image {
+        log::info!("Writing profile image to disk");
+        fs::write(
+            utils::get_image_disk_path(&user_uuid.to_string()),
+            crate::BASE_64_ENGINE
+                .decode(profile_image)
+                .expect("I'ts hase been validated"),
+        )
+        .map_err(|_| ApiError::InternalServer)?;
+        format!("/profiles/{user_uuid}")
+    } else {
+        log::info!("Using default profile image");
+        "/profiles/default".to_owned()
+    };
+    Ok(profile_image_path)
 }

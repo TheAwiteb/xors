@@ -281,6 +281,7 @@ mod update_user {
             Some(&UpdateUserSchema {
                 first_name: Some("NewFirst".to_string()),
                 last_name: user.user.last_name.clone(),
+                profile_image: None,
             }),
             vec![(
                 header::AUTHORIZATION,
@@ -337,6 +338,7 @@ mod update_user {
             Some(&UpdateUserSchema {
                 first_name: Some(user.user.first_name.clone()),
                 last_name: Some("NewLast".to_string()),
+                profile_image: None,
             }),
             vec![(
                 header::AUTHORIZATION,
@@ -394,6 +396,7 @@ mod update_user {
             Some(&UpdateUserSchema {
                 first_name: Some("".to_string()),
                 last_name: user.user.last_name.clone(),
+                profile_image: None,
             }),
             vec![(
                 header::AUTHORIZATION,
@@ -415,6 +418,7 @@ mod update_user {
             Some(&UpdateUserSchema {
                 first_name: Some("    ".to_string()),
                 last_name: user.user.last_name.clone(),
+                profile_image: None,
             }),
             vec![(
                 header::AUTHORIZATION,
@@ -436,6 +440,7 @@ mod update_user {
             Some(&UpdateUserSchema {
                 first_name: Some("First First".to_string()),
                 last_name: user.user.last_name.clone(),
+                profile_image: None,
             }),
             vec![(
                 header::AUTHORIZATION,
@@ -457,6 +462,7 @@ mod update_user {
             Some(&UpdateUserSchema {
                 first_name: Some("Long".repeat(20)),
                 last_name: user.user.last_name.clone(),
+                profile_image: None,
             }),
             vec![(
                 header::AUTHORIZATION,
@@ -502,6 +508,7 @@ mod update_user {
             Some(&UpdateUserSchema {
                 first_name: Some(user.user.first_name.clone()),
                 last_name: Some("".to_string()),
+                profile_image: None,
             }),
             vec![(
                 header::AUTHORIZATION,
@@ -523,6 +530,7 @@ mod update_user {
             Some(&UpdateUserSchema {
                 first_name: Some(user.user.first_name.clone()),
                 last_name: Some("    ".to_string()),
+                profile_image: None,
             }),
             vec![(
                 header::AUTHORIZATION,
@@ -543,6 +551,7 @@ mod update_user {
             Some(&UpdateUserSchema {
                 first_name: Some(user.user.first_name.clone()),
                 last_name: Some("Last Last".to_string()),
+                profile_image: None,
             }),
             vec![(
                 header::AUTHORIZATION,
@@ -563,6 +572,7 @@ mod update_user {
             Some(&UpdateUserSchema {
                 first_name: Some(user.user.first_name.clone()),
                 last_name: Some("Long".repeat(20)),
+                profile_image: None,
             }),
             vec![(
                 header::AUTHORIZATION,
@@ -608,6 +618,7 @@ mod update_user {
             Some(&UpdateUserSchema {
                 first_name: Some(user.user.first_name.clone()),
                 last_name: user.user.last_name.clone(),
+                profile_image: None,
             }),
             vec![(
                 header::AUTHORIZATION,
@@ -653,6 +664,7 @@ mod update_user {
             Some(&UpdateUserSchema {
                 first_name: None,
                 last_name: user.user.last_name.clone(),
+                profile_image: None,
             }),
             vec![(
                 header::AUTHORIZATION,
@@ -679,6 +691,7 @@ mod update_user {
             Some(&UpdateUserSchema {
                 first_name: Some("First".to_string()),
                 last_name: Some("Last".to_string()),
+                profile_image: None,
             }),
             vec![],
         )
@@ -702,6 +715,7 @@ mod update_user {
             Some(&UpdateUserSchema {
                 first_name: Some("First".to_string()),
                 last_name: Some("Last".to_string()),
+                profile_image: None,
             }),
             vec![(
                 header::AUTHORIZATION,
@@ -747,6 +761,7 @@ mod update_user {
             Some(&UpdateUserSchema {
                 first_name: Some("First".to_string()),
                 last_name: Some("Last".to_string()),
+                profile_image: None,
             }),
             vec![(
                 header::AUTHORIZATION,

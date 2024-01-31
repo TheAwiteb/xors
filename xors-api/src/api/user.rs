@@ -15,19 +15,21 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::api::exts::*;
-use crate::utils;
+use crate::{db_utils, utils};
 use crate::{
     errors::{ApiError, ApiResult},
     schemas::*,
 };
 
+use base64::Engine;
 use entity::prelude::*;
-use salvo::oapi::extract::{JsonBody, QueryParam};
+use salvo::oapi::extract::{JsonBody, PathParam, QueryParam};
 use salvo::prelude::*;
 use salvo::{oapi::endpoint, writing::Json};
 use sea_orm::DatabaseConnection;
 use uuid::Uuid;
 
+use std::path::Path;
 use std::sync::Arc;
 
 /// Get me, the user that make the request.
@@ -126,8 +128,6 @@ pub async fn delete_user(
 }
 
 /// Update the user's info.
-///
-/// Will returns error if there is no changes.
 #[endpoint(
     operation_id = "update_user_info",
     tags("User"),
@@ -151,34 +151,61 @@ pub async fn update_user(
     let user = depot.user(conn.as_ref()).await?;
     let updated_user = updated_user.into_inner();
 
-    if updated_user
-        .first_name
-        .as_ref()
-        .is_some_and(|s| s == &user.first_name)
-        && updated_user.last_name == user.last_name
-    {
-        Err(ApiError::NoChanges)
+    let mut user = user.into_active_model();
+
+    if let Some(first_name) = updated_user.first_name {
+        if &first_name != user.first_name.as_ref() {
+            utils::validate_user_name::<true>(&first_name)?;
+            user.first_name = Set(first_name);
+        }
     } else {
-        let mut user = user.into_active_model();
-
-        if let Some(first_name) = updated_user.first_name {
-            if &first_name != user.first_name.as_ref() {
-                utils::validate_user_name::<true>(&first_name)?;
-                user.first_name = Set(first_name);
-            }
-        } else {
-            return Err(ApiError::InvalidFirstName);
-        }
-
-        if &updated_user.last_name != user.last_name.as_ref() {
-            updated_user
-                .last_name
-                .as_deref()
-                .map(utils::validate_user_name::<false>)
-                .transpose()?;
-            user.last_name = Set(updated_user.last_name);
-        }
-        let user = user.save(conn.as_ref()).await?;
-        Ok(Json(user.into()))
+        return Err(ApiError::InvalidFirstName);
     }
+
+    if &updated_user.last_name != user.last_name.as_ref() {
+        updated_user
+            .last_name
+            .as_deref()
+            .map(utils::validate_user_name::<false>)
+            .transpose()?;
+        user.last_name = Set(updated_user.last_name);
+    }
+
+    let profile_image_path =
+        db_utils::update_profile_image_path(*user.uuid.as_ref(), updated_user.profile_image)?;
+    user.profile_image_path = Set(profile_image_path);
+    let user = user.save(conn.as_ref()).await?;
+    Ok(Json(user.into()))
+}
+
+/// Returns the user's profile image.
+#[endpoint(
+    operation_id = "get_user_profile_image",
+    tags("User"),
+    parameters(
+        ("uuid" = Uuid, Path, description = "The requested user's uuid"),
+    ),
+    responses(
+        (status_code = 200, description = "The user's profile image", content_type = "application/json", body = ImageSchema),
+        (status_code = 404, description = "User not found", content_type = "application/json", body = MessageSchema),
+        (status_code = 500, description = "Internal server error", content_type = "application/json", body = MessageSchema),
+        (status_code = 429, description = "Too many requests", content_type = "application/json", body = MessageSchema),
+    ),
+)]
+pub async fn get_user_profile_image(uuid: PathParam<Uuid>) -> ApiResult<Json<ImageSchema>> {
+    let requested_user_uuid = uuid.into_inner();
+
+    let image_path = if Path::new(&utils::get_image_disk_path(
+        &requested_user_uuid.to_string(),
+    ))
+    .exists()
+    {
+        utils::get_image_disk_path(&requested_user_uuid.to_string())
+    } else {
+        utils::get_image_disk_path("default")
+    };
+
+    let image_base64 = crate::BASE_64_ENGINE
+        .encode(std::fs::read(image_path).map_err(|_| ApiError::InternalServer)?);
+    Ok(Json(ImageSchema::new(image_base64)))
 }

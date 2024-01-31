@@ -16,6 +16,8 @@
 
 use std::cmp::Ordering;
 
+use base64::Engine;
+use image::GenericImageView;
 use passwords::{analyzer, scorer};
 use uuid::Uuid;
 
@@ -200,4 +202,52 @@ pub(crate) fn handle_captcha_state(captcha_state: &salvo_captcha::CaptchaState) 
     };
 
     Err(err)
+}
+
+/// Validates a user profile image.
+///
+/// Checks
+/// - The image's size. It must be less than 1MB.
+/// - The image's format. only png format is allowed.
+/// - The image's dimensions. It must be 128x128 pixels.
+pub(crate) fn validate_user_profile_image(profile_image: Option<&String>) -> ApiResult<()> {
+    log::info!("Validating user profile image");
+
+    if let Some(profile_image) = profile_image {
+        let image_bytes = crate::BASE_64_ENGINE
+            .decode(profile_image)
+            .map_err(|_| ApiError::InvalidProfileImage("Invalid base64 string".to_owned()))?;
+        if image_bytes.len() >= 1_000_000 {
+            // 1MB
+            return Err(ApiError::InvalidProfileImage(
+                "The image's size must be less than 1MB".to_owned(),
+            ));
+        }
+        if image::guess_format(&image_bytes).is_ok_and(|f| f != image::ImageFormat::Png) {
+            return Err(ApiError::InvalidProfileImage(
+                "The image's format must be png".to_owned(),
+            ));
+        }
+
+        // Safe to unwrap because we already checked the image's format and size.
+        let image = image::load_from_memory(&image_bytes).unwrap();
+        let dimensions = image.dimensions();
+        if dimensions.0 != 128 || dimensions.1 != 128 {
+            return Err(ApiError::InvalidProfileImage(
+                "The image's dimensions must be 128x128 pixels".to_owned(),
+            ));
+        }
+        log::info!("User profile image is valid");
+    }
+    Ok(())
+}
+
+/// Returns image disk path by file name
+pub(crate) fn get_image_disk_path(file_name: &str) -> String {
+    // For security reasons, will check the file name to prevent directory traversal attacks.
+    let file_name = file_name
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '.' || *c == '_' || *c == '-' || *c == '/')
+        .collect::<String>();
+    format!("./profile_images/{file_name}")
 }
