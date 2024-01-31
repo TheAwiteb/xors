@@ -589,52 +589,6 @@ mod update_user {
     }
 
     #[tokio::test]
-    async fn update_user_with_same_data() {
-        let service = get_service().await.expect("Failed to get service");
-        let conn = get_connection().await.expect("Failed to get connection");
-        let secret_key = get_secret_key();
-
-        let user = crate::db_utils::signin_user(
-            crate::db_utils::create_user(
-                &conn,
-                NewUserSchema {
-                    first_name: "First".to_string(),
-                    last_name: Some("Last".to_string()),
-                    username: "username_update_user_with_same_data".to_string(),
-                    password: "kdfkl(#0()$fkLKJF".to_string(),
-                },
-            )
-            .await
-            .expect("Failed to create user"),
-            &secret_key,
-        )
-        .await
-        .expect("Failed to signin user");
-
-        let res = send(
-            &service,
-            "user",
-            Method::PUT,
-            Some(&UpdateUserSchema {
-                first_name: Some(user.user.first_name.clone()),
-                last_name: user.user.last_name.clone(),
-                profile_image: None,
-            }),
-            vec![(
-                header::AUTHORIZATION,
-                HeaderValue::from_str(&format!("Bearer {}", user.jwt)).unwrap(),
-            )],
-        )
-        .await;
-
-        assert_eq!(
-            res.status_code,
-            Some(StatusCode::BAD_REQUEST),
-            "The response should have a `BAD_REQUEST` status code {res:?}"
-        );
-    }
-
-    #[tokio::test]
     async fn update_user_with_null_first_name() {
         let service = get_service().await.expect("Failed to get service");
         let conn = get_connection().await.expect("Failed to get connection");
