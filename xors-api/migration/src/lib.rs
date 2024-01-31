@@ -17,7 +17,6 @@
 pub use sea_orm_migration::prelude::*;
 
 mod m20240108_114814_user_table;
-mod m20240111_114045_captcha_table;
 mod m20240119_135153_game;
 
 pub struct Migrator;
@@ -27,7 +26,6 @@ impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
         vec![
             Box::new(m20240108_114814_user_table::Migration),
-            Box::new(m20240111_114045_captcha_table::Migration),
             Box::new(m20240119_135153_game::Migration),
         ]
     }
