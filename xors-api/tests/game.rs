@@ -14,12 +14,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::*;
+include!("mod.rs");
 
 #[cfg(test)]
 mod get_game {
     use super::*;
-    use crate::db_utils;
 
     #[tokio::test]
     async fn get_game_success() {
@@ -238,7 +237,6 @@ mod get_game {
 #[cfg(test)]
 mod lastest_games {
     use super::*;
-    use crate::db_utils;
 
     #[tokio::test]
     async fn lastest_games_success() {

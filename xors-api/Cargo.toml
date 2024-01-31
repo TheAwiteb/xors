@@ -13,6 +13,10 @@ version = "0.1.0"
 members = [".", "entity", "migration"]
 
 
+[[bin]]
+name = "api"
+path = "src/bin/api.rs"
+
 [dependencies]
 entity = { path = "entity" }
 migration = { path = "migration" }

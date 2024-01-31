@@ -14,17 +14,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub mod game;
-pub mod jwt;
-pub mod user;
+// This file are included in all tests files. Is used to define common functions and functions to be used in all tests.
 
-use std::env;
-use std::net::Ipv4Addr;
-use std::net::SocketAddrV4;
-
-use crate::errors::ApiResult;
-use crate::schemas::*;
+#[allow(unused_imports)]
 use chrono::Duration;
+#[allow(unused_imports)]
 use entity::prelude::*;
 use salvo::conn::SocketAddr;
 use salvo::http::ReqBody;
@@ -36,7 +30,16 @@ use salvo::{
     hyper::{header, Method},
 };
 use serde::Serialize;
+use std::env;
+use std::net::Ipv4Addr;
+use std::net::SocketAddrV4;
+#[allow(unused_imports)]
 use uuid::Uuid;
+#[allow(unused_imports)]
+use xors_api::db_utils;
+use xors_api::errors::ApiResult;
+#[allow(unused_imports)]
+use xors_api::schemas::*;
 
 const API_URL: &str = "http://127.0.0.1:5801";
 
@@ -86,10 +89,5 @@ pub async fn get_service() -> ApiResult<Service> {
     // Set the test environment variable to true
     std::env::set_var("XORS_API_TEST", "true");
 
-    Ok(crate::api::service(
-        get_connection().await?,
-        100,
-        10,
-        get_secret_key(),
-    ))
+    Ok(xors_api::api::service(get_connection().await?, 100, 10, get_secret_key()).0)
 }
