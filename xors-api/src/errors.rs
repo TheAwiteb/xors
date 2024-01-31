@@ -65,6 +65,8 @@ pub enum ApiError {
     UnProvidedCaptchaAnswer,
     #[error("{0}")]
     InvalidProfileImage(String),
+    #[error("The old password is same as the new password, the new password must be different from the old password")]
+    PasswordNotChanged,
 
     #[error("Internal server error")]
     InternalServer,
@@ -117,6 +119,7 @@ impl Scribe for ApiError {
             | ApiError::InvalidPassword(_)
             | ApiError::UnProvidedCaptchaToken
             | ApiError::UnProvidedCaptchaAnswer
+            | ApiError::PasswordNotChanged
             | ApiError::InvalidProfileImage(_) => {
                 res.status_code(StatusCode::BAD_REQUEST);
                 crate::api::write_json_body(res, MessageSchema::new(self.to_string()));
