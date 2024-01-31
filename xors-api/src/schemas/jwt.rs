@@ -19,6 +19,8 @@ use salvo::oapi::ToSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::utils;
+
 /// The user's schema. It's used to return the user's data.
 #[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Debug, ToSchema)]
 #[salvo(schema(symbol = "UserSchema", example = json!(UserSchema::default())))]
@@ -31,8 +33,8 @@ pub struct UserSchema {
     pub last_name: Option<String>,
     /// The user's username. It's unique.
     pub username: String,
-    /// The user's profile image url.
-    pub profile_image_url: String,
+    /// The user's profile image path.
+    pub profile_image_path: String,
     /// The user's wins games.
     pub wins: i64,
     /// The user's losts games.
@@ -111,12 +113,13 @@ impl UserSchema {
     ///
     /// This only used when the game's player is deleted, so we can still return the game's data. (It's not saving the real player's data)
     pub(crate) fn deleted_user() -> Self {
+        let nil_uuid = Uuid::nil();
         Self {
-            uuid: Uuid::nil(),
+            uuid: nil_uuid,
             first_name: "Deleted".to_owned(),
             last_name: Some("Player".to_owned()),
             username: "Deleted".to_owned(),
-            profile_image_url: "https://api.dicebear.com/7.x/initials/svg?seed=Deleted".to_owned(),
+            profile_image_path: utils::get_image_disk_path(&nil_uuid.to_string()),
             wins: 0,
             losts: 0,
             draw: 0,
@@ -132,7 +135,7 @@ impl Default for UserSchema {
             first_name: "First".to_owned(),
             last_name: Some("Last".to_owned()),
             username: "Username".to_owned(),
-            profile_image_url: "https://api.dicebear.com/7.x/initials/svg?seed=Username".to_owned(),
+            profile_image_path: utils::get_image_disk_path("default"),
             wins: 0,
             losts: 0,
             draw: 0,
@@ -169,7 +172,7 @@ impl From<UserActiveModel> for UserSchema {
             first_name: user.first_name.unwrap(),
             last_name: user.last_name.unwrap(),
             username: user.username.unwrap(),
-            profile_image_url: user.profile_image_url.unwrap(),
+            profile_image_path: user.profile_image_path.unwrap(),
             wins: user.wins.unwrap(),
             losts: user.losts.unwrap(),
             draw: user.draw.unwrap(),

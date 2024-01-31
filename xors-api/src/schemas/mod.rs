@@ -30,3 +30,10 @@ pub struct MessageSchema {
     #[salvo(schema(example = "Message"))]
     message: String,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, ToSchema, derive_new::new)]
+#[salvo(schema(symbol = "ImageSchema", example = json!(ImageSchema::new("<IMAGE_BASE64>".to_owned()))))]
+pub struct ImageSchema {
+    #[salvo(schema(example = "<IMAGE_BASE64>"))]
+    image: String,
+}

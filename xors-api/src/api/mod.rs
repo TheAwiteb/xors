@@ -165,6 +165,7 @@ pub fn service(
                         .push(Router::with_path("captcha").get(jwt::captcha)),
                 )
                 .push(Router::with_path("user").get(user::get_user_info))
+                .push(Router::with_path("profiles/<uuid>").get(user::get_user_profile_image))
                 .push(Router::with_path("game/<uuid>").get(game::get_game_by_uuid))
                 .push(Router::with_path("games").get(game::get_lastest_games)),
         )

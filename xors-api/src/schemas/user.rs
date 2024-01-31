@@ -35,6 +35,10 @@ pub struct UpdateUserSchema {
     /// The user's last name.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_name: Option<String>,
+    /// Profile png image base64 encoded. If it's not provided, the profile image will be deleted.
+    /// Must be 128x128 pixels and less than 1MB in size.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub profile_image: Option<String>,
 }
 
 impl Default for DeleteUserSchema {
@@ -50,6 +54,7 @@ impl Default for UpdateUserSchema {
         Self {
             first_name: Some("first_name".to_owned()),
             last_name: Some("last_name".to_owned()),
+            profile_image: Some("<IMAGE_BASE64>".to_owned()),
         }
     }
 }
