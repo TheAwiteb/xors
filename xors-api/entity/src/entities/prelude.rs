@@ -23,11 +23,6 @@ pub use super::user::{
     ActiveModel as UserActiveModel, Column as UserColumn, Entity as UserEntity, Model as UserModel,
 };
 
-pub use super::captcha::{
-    ActiveModel as CaptchaActiveModel, Column as CaptchaColumn, Entity as CaptchaEntity,
-    Model as CaptchaModel,
-};
-
 pub use super::game::{
     ActiveModel as GameActiveModel, Column as GameColumn, Entity as GameEntity, Model as GameModel,
 };
