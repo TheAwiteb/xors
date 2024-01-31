@@ -43,7 +43,7 @@ impl MigrationTrait for Migration {
                             .unique_key()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(User::ProfileImageUrl).string().not_null())
+                    .col(ColumnDef::new(User::ProfileImagePath).string().not_null())
                     .col(
                         ColumnDef::new(User::Wins)
                             .big_integer()
@@ -84,7 +84,7 @@ enum User {
     FirstName,
     LastName,
     Username,
-    ProfileImageUrl,
+    ProfileImagePath,
     Wins,
     Losts,
     Draw,
