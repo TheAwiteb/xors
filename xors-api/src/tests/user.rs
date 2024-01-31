@@ -913,3 +913,300 @@ mod delete_user {
         );
     }
 }
+
+#[cfg(test)]
+mod reset_password {
+    use crate::db_utils;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn reset_password_success() {
+        let service = get_service().await.expect("Failed to get service");
+        let conn = get_connection().await.expect("Failed to get connection");
+        let secret_key = get_secret_key();
+
+        const OLD_PASSWORD: &str = "kdfkl(#0()$fkLKJF";
+        const NEW_PASSWORD: &str = "kdfkl(#0()$fkLKJf";
+
+        let user = db_utils::signin_user(
+            db_utils::create_user(
+                &conn,
+                NewUserSchema {
+                    first_name: "First".to_string(),
+                    last_name: Some("Last".to_string()),
+                    username: "reset_password_success".to_string(),
+                    password: OLD_PASSWORD.to_owned(),
+                },
+            )
+            .await
+            .expect("Failed to create user"),
+            &secret_key,
+        )
+        .await
+        .expect("Failed to signin user");
+
+        let res = send(
+            &service,
+            "user/reset_password",
+            Method::POST,
+            Some(&ResetPasswordSchema {
+                old_password: OLD_PASSWORD.to_owned(),
+                new_password: NEW_PASSWORD.to_owned(),
+            }),
+            vec![(
+                header::AUTHORIZATION,
+                HeaderValue::from_str(&format!("Bearer {}", user.jwt)).unwrap(),
+            )],
+        )
+        .await;
+
+        assert_eq!(
+            res.status_code,
+            Some(StatusCode::OK),
+            "The response should have a `OK` status code {res:?}"
+        );
+
+        let user_with_new_password = db_utils::get_user(&conn, user.user.uuid)
+            .await
+            .expect("Failed to get user");
+        assert!(
+            bcrypt::verify(NEW_PASSWORD, user_with_new_password.password_hash.as_ref())
+                .expect("Failed to verify password"),
+            "Password should be updated"
+        );
+    }
+
+    #[tokio::test]
+    async fn reset_password_with_invalid_old_password() {
+        let service = get_service().await.expect("Failed to get service");
+        let conn = get_connection().await.expect("Failed to get connection");
+        let secret_key = get_secret_key();
+
+        const OLD_PASSWORD: &str = "kdfkl(#0()$fkLKJF";
+        const NEW_PASSWORD: &str = "kdfkl(#0()$fkLKJf";
+
+        let user = db_utils::signin_user(
+            db_utils::create_user(
+                &conn,
+                NewUserSchema {
+                    first_name: "First".to_string(),
+                    last_name: Some("Last".to_string()),
+                    username: "reset_password_with_invalid_old".to_string(),
+                    password: OLD_PASSWORD.to_owned(),
+                },
+            )
+            .await
+            .expect("Failed to create user"),
+            &secret_key,
+        )
+        .await
+        .expect("Failed to signin user");
+
+        let res = send(
+            &service,
+            "user/reset_password",
+            Method::POST,
+            Some(&ResetPasswordSchema {
+                old_password: "InvalidOldPassword".to_owned(),
+                new_password: NEW_PASSWORD.to_owned(),
+            }),
+            vec![(
+                header::AUTHORIZATION,
+                HeaderValue::from_str(&format!("Bearer {}", user.jwt)).unwrap(),
+            )],
+        )
+        .await;
+
+        assert_eq!(
+            res.status_code,
+            Some(StatusCode::BAD_REQUEST),
+            "The response should have a `BAD_REQUEST` status code {res:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn reset_password_without_auth() {
+        let service = get_service().await.expect("Failed to get service");
+
+        let res = send(
+            &service,
+            "user/reset_password",
+            Method::POST,
+            Some(&ResetPasswordSchema {
+                old_password: "kdfkl(#0()$fkLKJF".to_string(),
+                new_password: "kdfkl(#0()$fkLKJf".to_string(),
+            }),
+            vec![],
+        )
+        .await;
+
+        assert_eq!(
+            res.status_code,
+            Some(StatusCode::UNAUTHORIZED),
+            "The response should have a `UNAUTHORIZED` status code {res:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn reset_password_with_invalid_auth() {
+        let service = get_service().await.expect("Failed to get service");
+
+        let res = send(
+            &service,
+            "user/reset_password",
+            Method::POST,
+            Some(&ResetPasswordSchema {
+                old_password: "kdfkl(#0()$fkLKJF".to_string(),
+                new_password: "kdfkl(#0()$fkLKJf".to_string(),
+            }),
+            vec![(
+                header::AUTHORIZATION,
+                HeaderValue::from_str("Bearer invalid").unwrap(),
+            )],
+        )
+        .await;
+
+        assert_eq!(
+            res.status_code,
+            Some(StatusCode::FORBIDDEN),
+            "The response should have a `FORBIDDEN` status code {res:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn reset_password_with_same_password() {
+        let service = get_service().await.expect("Failed to get service");
+        let conn = get_connection().await.expect("Failed to get connection");
+        let secret_key = get_secret_key();
+
+        const OLD_PASSWORD: &str = "kdfkl(#0()$fkLKJF";
+
+        let user = db_utils::signin_user(
+            db_utils::create_user(
+                &conn,
+                NewUserSchema {
+                    first_name: "First".to_string(),
+                    last_name: Some("Last".to_string()),
+                    username: "username_reset_password_with_same_password".to_string(),
+                    password: OLD_PASSWORD.to_owned(),
+                },
+            )
+            .await
+            .expect("Failed to create user"),
+            &secret_key,
+        )
+        .await
+        .expect("Failed to signin user");
+
+        let res = send(
+            &service,
+            "user/reset_password",
+            Method::POST,
+            Some(&ResetPasswordSchema {
+                old_password: OLD_PASSWORD.to_owned(),
+                new_password: OLD_PASSWORD.to_owned(),
+            }),
+            vec![(
+                header::AUTHORIZATION,
+                HeaderValue::from_str(&format!("Bearer {}", user.jwt)).unwrap(),
+            )],
+        )
+        .await;
+
+        assert_eq!(
+            res.status_code,
+            Some(StatusCode::BAD_REQUEST),
+            "The response should have a `BAD_REQUEST` status code {res:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn reset_password_with_invalid_new_password() {
+        let service = get_service().await.expect("Failed to get service");
+        let conn = get_connection().await.expect("Failed to get connection");
+        let secret_key = get_secret_key();
+
+        const OLD_PASSWORD: &str = "kdfkl(#0()$fkLKJF";
+
+        let user = db_utils::signin_user(
+            db_utils::create_user(
+                &conn,
+                NewUserSchema {
+                    first_name: "First".to_string(),
+                    last_name: Some("Last".to_string()),
+                    username: "reset_password_with_invalid_new".to_string(),
+                    password: OLD_PASSWORD.to_owned(),
+                },
+            )
+            .await
+            .expect("Failed to create user"),
+            &secret_key,
+        )
+        .await
+        .expect("Failed to signin user");
+
+        let res = send(
+            &service,
+            "user/reset_password",
+            Method::POST,
+            Some(&ResetPasswordSchema {
+                old_password: "kdfkl(#0()$fkLKJF".to_string(),
+                new_password: "".to_string(),
+            }),
+            vec![(
+                header::AUTHORIZATION,
+                HeaderValue::from_str(&format!("Bearer {}", user.jwt)).unwrap(),
+            )],
+        )
+        .await;
+
+        assert_eq!(
+            res.status_code,
+            Some(StatusCode::BAD_REQUEST),
+            "The response should have a `BAD_REQUEST` status code {res:?}"
+        );
+
+        let res = send(
+            &service,
+            "user/reset_password",
+            Method::POST,
+            Some(&ResetPasswordSchema {
+                old_password: "kdfkl(#0()$fkLKJF".to_string(),
+                new_password: "    ".to_string(),
+            }),
+            vec![(
+                header::AUTHORIZATION,
+                HeaderValue::from_str(&format!("Bearer {}", user.jwt)).unwrap(),
+            )],
+        )
+        .await;
+
+        assert_eq!(
+            res.status_code,
+            Some(StatusCode::BAD_REQUEST),
+            "The response should have a `BAD_REQUEST` status code {res:?}"
+        );
+
+        let res = send(
+            &service,
+            "user/reset_password",
+            Method::POST,
+            Some(&ResetPasswordSchema {
+                old_password: "kdfkl(#0()$fkLKJF".to_string(),
+                new_password: "kdfkl(#0()$fkLKJF".repeat(20),
+            }),
+            vec![(
+                header::AUTHORIZATION,
+                HeaderValue::from_str(&format!("Bearer {}", user.jwt)).unwrap(),
+            )],
+        )
+        .await;
+
+        assert_eq!(
+            res.status_code,
+            Some(StatusCode::BAD_REQUEST),
+            "The response should have a `BAD_REQUEST` status code {res:?}"
+        );
+    }
+}
