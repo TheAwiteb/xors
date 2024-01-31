@@ -63,8 +63,8 @@ pub enum ApiError {
     UnProvidedCaptchaToken,
     #[error("Unprovided captcha answer, the captcha answer is required")]
     UnProvidedCaptchaAnswer,
-    #[error("No changes were made")]
-    NoChanges,
+    #[error("{0}")]
+    InvalidProfileImage(String),
 
     #[error("Internal server error")]
     InternalServer,
@@ -111,13 +111,13 @@ impl Scribe for ApiError {
             ApiError::UsernameAlreadyExists(_)
             | ApiError::NotRefreshToken
             | ApiError::NotUserJwt
-            | ApiError::NoChanges
             | ApiError::InvalidFirstName
             | ApiError::InvalidLastName
             | ApiError::InvalidUsername
             | ApiError::InvalidPassword(_)
             | ApiError::UnProvidedCaptchaToken
-            | ApiError::UnProvidedCaptchaAnswer => {
+            | ApiError::UnProvidedCaptchaAnswer
+            | ApiError::InvalidProfileImage(_) => {
                 res.status_code(StatusCode::BAD_REQUEST);
                 crate::api::write_json_body(res, MessageSchema::new(self.to_string()));
             }
