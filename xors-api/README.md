@@ -79,6 +79,9 @@ docker-compose start api
 ## API
 After running the server, you can access the API documentation at `http://0.0.0.0:8000/api-doc/swagger-ui/`
 
+### OpenAPI
+You can find the OpenAPI file at [`openapi.json`](./openapi.json) file. And you can view it using [Swagger Editor](https://editor.swagger.io/?url=https://raw.githubusercontent.com/TheAwiteb/xors/master/xors-api/openapi.json).
+
 ### Development
 For development, you need to have this requirements:
 - [cargo (Rust)](https://doc.rust-lang.org/cargo/getting-started/installation.html)
