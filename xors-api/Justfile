@@ -27,6 +27,7 @@ run:
     cargo +stable dotenv -e .env.dev -- fmt -- --check
     cargo +stable dotenv -e .env.dev -- clippy -- -D warnings --no-deps
     {{JUST_EXECUTABLE}} msrv
+    {{JUST_EXECUTABLE}} install-tools
     {{JUST_EXECUTABLE}} tests
 
 # Check that the current MSRV is correct
@@ -36,6 +37,10 @@ msrv:
     cargo +{{msrv}} dotenv -e .env.dev -- build -q
     echo "MSRV is correct"
 
+install-tools:
+    cargo install cargo-dotenv
+    cargo install cargo-nextest
+
 # Run the tests
 @tests:
     docker-compose rm -f -s db
@@ -43,7 +48,7 @@ msrv:
     sleep 2
     cargo dotenv -e .env.dev -- run --manifest-path ./migration/Cargo.toml -- up -u postgres://myuser:mypassword@localhost:8246/xors_api_db
 
-    cargo dotenv -e .env.dev -- test 
+    cargo dotenv -e .env.dev -- nextest run --no-fail-fast --retries 3 --test-threads 5
 
     docker-compose rm -f -s db
 
