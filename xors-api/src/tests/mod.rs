@@ -83,6 +83,9 @@ pub fn get_secret_key() -> String {
 
 /// Returns the service.
 pub async fn get_service() -> ApiResult<Service> {
+    // Set the test environment variable to true
+    std::env::set_var("XORS_API_TEST", "true");
+
     Ok(crate::api::service(
         get_connection().await?,
         100,

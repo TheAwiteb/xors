@@ -16,7 +16,6 @@
 
 use std::cmp::Ordering;
 
-use entity::prelude::*;
 use passwords::{analyzer, scorer};
 use uuid::Uuid;
 
@@ -135,33 +134,6 @@ pub fn validate_user_registration(user: &NewUserSchema) -> ApiResult<()> {
     Ok(())
 }
 
-/// Checks if the given captcha token and answer are valid.
-/// If the captcha token is valid, it will be marked as used.
-#[must_use = "This function will not panic, but it will return an error if the captcha token is invalid"]
-pub async fn check_captcha_answer(
-    conn: &sea_orm::DatabaseConnection,
-    captcha_token: Uuid,
-    user_answer: &str,
-) -> ApiResult<()> {
-    log::info!("Checking captcha answer");
-
-    let captcha = CaptchaEntity::find()
-        .filter(CaptchaColumn::Uuid.eq(captcha_token))
-        .one(conn)
-        .await?
-        .ok_or(ApiError::InvalidCaptchaToken)?;
-    if chrono::Utc::now().naive_utc() > captcha.expired_at {
-        Err(ApiError::InvalidCaptchaToken)
-    } else if !captcha.answer.eq_ignore_ascii_case(user_answer) {
-        Err(ApiError::InvalidCaptchaAnswer)
-    } else {
-        CaptchaEntity::delete(captcha.into_active_model())
-            .exec(conn)
-            .await?;
-        Ok(())
-    }
-}
-
 /// Returns the game over data for the given game
 pub(crate) fn game_over_data(
     game_uuid: Uuid,
@@ -212,4 +184,20 @@ pub(crate) fn check_move_validity(board: &Board, player: &PlayerData, place: u8)
         return true;
     }
     false
+}
+
+/// Handle the captcha state and return an error if the captcha state is invalid. Otherwise, return Ok.
+pub(crate) fn handle_captcha_state(captcha_state: &salvo_captcha::CaptchaState) -> ApiResult<()> {
+    use salvo_captcha::CaptchaState::*;
+
+    let err = match captcha_state {
+        TokenNotFound => ApiError::UnProvidedCaptchaToken,
+        AnswerNotFound => ApiError::UnProvidedCaptchaAnswer,
+        WrongToken => ApiError::InvalidCaptchaToken,
+        WrongAnswer => ApiError::InvalidCaptchaAnswer,
+        StorageError => ApiError::InternalServer,
+        _ => return Ok(()),
+    };
+
+    Err(err)
 }

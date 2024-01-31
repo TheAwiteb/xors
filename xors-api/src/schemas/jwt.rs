@@ -66,11 +66,6 @@ pub struct NewUserSchema {
     /// - It can't be a common password.
     #[salvo(schema(min_length = 8, max_length = 64))]
     pub password: String,
-    /// Captcha token. It's used to verify that the user is not a robot.
-    pub captcha_token: Uuid,
-    /// Captcha answer. It's used to verify that the user is not a robot.
-    #[salvo(schema(min_length = 1, max_length = 64))]
-    pub captcha_answer: String,
 }
 
 /// The signin schema. It's used to signin a user.
@@ -153,8 +148,6 @@ impl Default for NewUserSchema {
             last_name: Some("Last".to_owned()),
             username: "Username".to_owned(),
             password: "Password".to_owned(),
-            captcha_token: Uuid::new_v4(),
-            captcha_answer: "<CAPTCHA_ANSWER>".to_owned(),
         }
     }
 }

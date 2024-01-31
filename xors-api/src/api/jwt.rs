@@ -14,17 +14,21 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use crate::{
     db_utils,
     errors::{ApiError, ApiResult},
     schemas::*,
+    utils,
 };
 
-use ::captcha::{gen, Difficulty};
 use base64::Engine;
+use chrono::Duration;
 use salvo::{oapi::extract::JsonBody, prelude::*};
+use salvo_captcha::{
+    CacacheStorage, CaptchaDepotExt, CaptchaDifficulty, CaptchaGenerator, CaptchaName,
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -69,25 +73,21 @@ impl JwtClaims {
     )
 )]
 pub async fn captcha(depot: &mut Depot) -> ApiResult<Json<CaptchaSchema>> {
-    let conn = depot.obtain::<Arc<sea_orm::DatabaseConnection>>().unwrap();
-    let (captcha_image, captcha_answer) = {
-        let captcha_rng = gen(Difficulty::Medium);
-        let captcha_answer = captcha_rng.chars().iter().collect::<String>();
-        (
-            captcha_rng
-                .as_png()
-                .ok_or(ApiError::InternalServer)
-                .map(|bytes| crate::BASE_64_ENGINE.encode(bytes)),
-            captcha_answer,
-        )
-    };
-
-    let captcha_model = db_utils::create_captcha(conn.as_ref(), captcha_answer).await?;
+    let captcha_storage = depot.obtain::<Arc<CacacheStorage>>().unwrap();
+    let (captcha_token, captcha_image) = captcha_storage
+        .new_captcha(CaptchaName::Amelia, CaptchaDifficulty::Medium)
+        .await
+        .map_err(|_| ApiError::InternalServer)?
+        .ok_or(ApiError::InternalServer)?;
 
     Ok(Json(CaptchaSchema {
-        captcha_token: captcha_model.uuid.unwrap(),
-        captcha_image: format!("data:image/png;base64,{}", captcha_image?),
-        expired_at: captcha_model.expired_at.unwrap(),
+        captcha_token: Uuid::from_str(&captcha_token)
+            .expect("The cacache storage should return a valid uuid"),
+        captcha_image: format!(
+            "data:image/png;base64,{}",
+            crate::BASE_64_ENGINE.encode(captcha_image)
+        ),
+        expired_at: chrono::Utc::now().naive_utc() + Duration::minutes(5),
     }))
 }
 
@@ -105,9 +105,14 @@ pub async fn captcha(depot: &mut Depot) -> ApiResult<Json<CaptchaSchema>> {
         example = json!(NewUserSchema::default()),
         content_type = "application/json",
     ),
+    parameters(
+        ("X-Captcha-Token" = String, Header, description = "The captcha token, get it from the `/auth/captcha` endpoint"),
+        ("X-Captcha-Answer" = String, Header, description = "The captcha answer, the text that in the captcha image"),
+    ),
     responses(
         (status_code = 200, description = "User created", content_type = "application/json", body = UserSigninSchema),
         (status_code = 400, description = "Username already exists", content_type = "application/json", body = MessageSchema),
+        (status_code = 400, description = "Unprovided captcha token or answer", content_type = "application/json", body = MessageSchema),
         (status_code = 403, description = "Invalid captcha token", content_type = "application/json", body = MessageSchema),
         (status_code = 403, description = "Invalid captcha answer", content_type = "application/json", body = MessageSchema),
         (status_code = 500, description = "Internal server error", content_type = "application/json", body = MessageSchema),
@@ -122,10 +127,12 @@ pub async fn signup(
     let secret_key = depot.get::<Arc<String>>("secret_key").unwrap();
     let user = new_user.into_inner();
 
-    crate::utils::check_captcha_answer(conn.as_ref(), user.captcha_token, &user.captcha_answer)
-        .await?;
-
-    crate::utils::validate_user_registration(&user)?;
+    utils::handle_captcha_state(
+        depot
+            .get_captcha_state()
+            .expect("This route is protected by the `salvo_captcha` middleware"),
+    )?;
+    utils::validate_user_registration(&user)?;
 
     db_utils::signin_user(
         db_utils::create_user(conn.as_ref(), user).await?,
@@ -147,9 +154,16 @@ pub async fn signup(
         example = json!(SigninSchema::default()),
         content_type = "application/json",
     ),
+    parameters(
+        ("X-Captcha-Token" = String, Header, description = "The captcha token, get it from the `/auth/captcha` endpoint"),
+        ("X-Captcha-Answer" = String, Header, description = "The captcha answer, the text that in the captcha image"),
+    ),
     responses(
         (status_code = 200, description = "User signed in", content_type = "application/json", body = UserSigninSchema),
         (status_code = 400, description = "Invalid username or password", content_type = "application/json", body = MessageSchema),
+        (status_code = 400, description = "Unprovided captcha token or answer", content_type = "application/json", body = MessageSchema),
+        (status_code = 403, description = "Invalid captcha token", content_type = "application/json", body = MessageSchema),
+        (status_code = 403, description = "Invalid captcha answer", content_type = "application/json", body = MessageSchema),
         (status_code = 500, description = "Internal server error", content_type = "application/json", body = MessageSchema),
         (status_code = 429, description = "Too many requests", content_type = "application/json", body = MessageSchema),
     )
@@ -162,8 +176,14 @@ pub async fn signin(
     let secret_key = depot.get::<Arc<String>>("secret_key").unwrap();
     let signin_schema = signin_schema.into_inner();
 
-    crate::utils::validate_password(&signin_schema.password)?;
-    crate::utils::validate_user_signin(&signin_schema.username)?;
+    utils::handle_captcha_state(
+        depot
+            .get_captcha_state()
+            .expect("This route is protected by the `salvo_captcha` middleware"),
+    )?;
+
+    utils::validate_password(&signin_schema.password)?;
+    utils::validate_user_signin(&signin_schema.username)?;
 
     if let Ok(user) = db_utils::get_user_by_username(conn.as_ref(), signin_schema.username).await {
         if bcrypt::verify(&signin_schema.password, user.password_hash.as_ref()).unwrap_or_default()

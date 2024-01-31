@@ -14,14 +14,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::env;
+use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use salvo::http::ResBody;
+use salvo::hyper::header::HeaderName;
 use salvo::jwt_auth::{ConstDecoder, HeaderFinder};
 use salvo::oapi::security::{Http, HttpAuthScheme};
 use salvo::oapi::{Info, License, SecurityScheme};
 use salvo::rate_limiter::*;
 use salvo::{catcher::Catcher, http::HeaderValue, hyper::header, logging::Logger, prelude::*};
+use salvo_captcha::*;
 
 use crate::schemas::MessageSchema;
 
@@ -104,6 +109,22 @@ pub fn service(
                 HeaderFinder::new().header_names(vec![header::AUTHORIZATION]),
             )])
             .force_passed(false);
+    let captcha_middleware = Captcha::<CacacheStorage, CaptchaHeaderFinder<String, String>>::new(
+        CacacheStorage::new("chapcha_cache"),
+        CaptchaHeaderFinder::new()
+            .token_header(HeaderName::from_str("X-Captcha-Token").expect("Is valid header name"))
+            .answer_header(HeaderName::from_str("X-Captcha-Answer").expect("Is valid header name")),
+    )
+    .skipper(|_: &mut Request, _: &Depot| {
+        // Skip the captcha middleware if we are in the test environment
+        // The captcha logic is tested in the `salvo_captcha` crate
+        if matches!(env::var("XORS_API_TEST"), Ok(val) if val == "true") {
+            return true;
+        }
+        false
+    });
+
+    let captcha_storage = Arc::new(captcha_middleware.storage().clone());
 
     let unauth_limiter = RateLimiter::new(
         SlidingGuard::new(),
@@ -124,6 +145,7 @@ pub fn service(
         .hoop(Logger::new())
         .hoop(
             affix::inject(Arc::new(conn))
+                .inject(captcha_storage.clone())
                 .insert("secret_key", Arc::new(secret_key))
                 .insert("max_online_games", Arc::new(max_online_games))
                 .insert("move_period", Arc::new(move_period)),
@@ -135,8 +157,11 @@ pub fn service(
                 .hoop(add_server_headers)
                 .push(
                     Router::with_path("auth")
-                        .push(Router::with_path("signup").post(jwt::signup))
-                        .push(Router::with_path("signin").post(jwt::signin))
+                        .push(
+                            Router::with_hoop(captcha_middleware)
+                                .push(Router::with_path("signup").post(jwt::signup))
+                                .push(Router::with_path("signin").post(jwt::signin)),
+                        )
                         .push(Router::with_path("captcha").get(jwt::captcha)),
                 )
                 .push(Router::with_path("user").get(user::get_user_info))
@@ -191,6 +216,22 @@ pub fn service(
                 .keywords("XORS, XO, Game, Multiplayer, API, Rust, Salvo, SeaORM")
                 .into_router("/api-doc/swagger-ui"),
         );
+
+    tokio::spawn({
+        log::info!("Start the captcha cleaner...");
+        let cleanner_storage = captcha_storage.clone();
+        async move {
+            let captcha_expired_after = Duration::from_secs(60 * 5);
+            let clean_interval = Duration::from_secs(60);
+
+            loop {
+                if let Err(err) = cleanner_storage.clear_expired(captcha_expired_after).await {
+                    log::error!("Failed to clean captcha storage: {err}")
+                }
+                tokio::time::sleep(clean_interval).await;
+            }
+        }
+    });
 
     Service::new(router).catcher(
         Catcher::default()
