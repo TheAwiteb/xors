@@ -148,35 +148,6 @@ pub async fn get_user_by_username(
         .ok_or(ApiError::UserNotFound)
 }
 
-/// Creates a new captcha in the database with the given answer.
-pub async fn create_captcha(
-    conn: &sea_orm::DatabaseConnection,
-    answer: String,
-) -> ApiResult<CaptchaActiveModel> {
-    log::info!("Creating captcha");
-
-    let uuid = loop {
-        let uuid = Uuid::new_v4();
-        if CaptchaEntity::find()
-            .filter(CaptchaColumn::Uuid.eq(uuid))
-            .count(conn)
-            .await?
-            == 0
-        {
-            break uuid;
-        }
-    };
-
-    Ok(CaptchaActiveModel {
-        uuid: Set(uuid),
-        answer: Set(answer),
-        expired_at: Set(chrono::Utc::now().naive_utc() + chrono::Duration::minutes(5)),
-        ..Default::default()
-    }
-    .save(conn)
-    .await?)
-}
-
 /// End a game in the database. This will set the `ended_at` column to the current time and remove the `board` column.
 pub async fn end_game(
     conn: &sea_orm::DatabaseConnection,

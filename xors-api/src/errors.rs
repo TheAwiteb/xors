@@ -59,6 +59,10 @@ pub enum ApiError {
     InvalidCaptchaToken,
     #[error("The captcha answer is incorrect")]
     InvalidCaptchaAnswer,
+    #[error("Unprovided captcha token, the captcha token is required")]
+    UnProvidedCaptchaToken,
+    #[error("Unprovided captcha answer, the captcha answer is required")]
+    UnProvidedCaptchaAnswer,
     #[error("No changes were made")]
     NoChanges,
 
@@ -111,7 +115,9 @@ impl Scribe for ApiError {
             | ApiError::InvalidFirstName
             | ApiError::InvalidLastName
             | ApiError::InvalidUsername
-            | ApiError::InvalidPassword(_) => {
+            | ApiError::InvalidPassword(_)
+            | ApiError::UnProvidedCaptchaToken
+            | ApiError::UnProvidedCaptchaAnswer => {
                 res.status_code(StatusCode::BAD_REQUEST);
                 crate::api::write_json_body(res, MessageSchema::new(self.to_string()));
             }

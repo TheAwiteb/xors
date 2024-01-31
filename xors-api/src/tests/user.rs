@@ -34,8 +34,6 @@ mod get_me {
                     last_name: Some("Last".to_string()),
                     username: "username_get_me".to_string(),
                     password: "kdfkl(#0()$fkLKJF".to_string(),
-                    captcha_token: Uuid::new_v4(),
-                    captcha_answer: "answer".to_string(),
                 },
             )
             .await
@@ -83,8 +81,6 @@ mod get_me {
                     last_name: Some("Last".to_string()),
                     username: "username_get_me_with_refresh_token".to_string(),
                     password: "kdfkl(#0()$fkLKJF".to_string(),
-                    captcha_token: Uuid::new_v4(),
-                    captcha_answer: "answer".to_string(),
                 },
             )
             .await
@@ -168,8 +164,6 @@ mod get_user {
                     last_name: Some("Last".to_string()),
                     username: "username_get_user_success".to_string(),
                     password: "kdfkl(#0()$fkLKJF".to_string(),
-                    captcha_token: Uuid::new_v4(),
-                    captcha_answer: "answer".to_string(),
                 },
             )
             .await
@@ -271,8 +265,6 @@ mod update_user {
                     last_name: Some("Last".to_string()),
                     username: "username_update_user_first_name".to_string(),
                     password: "kdfkl(#0()$fkLKJF".to_string(),
-                    captcha_token: Uuid::new_v4(),
-                    captcha_answer: "answer".to_string(),
                 },
             )
             .await
@@ -329,8 +321,6 @@ mod update_user {
                     last_name: Some("Last".to_string()),
                     username: "username_update_user_last_name".to_string(),
                     password: "kdfkl(#0()$fkLKJF".to_string(),
-                    captcha_token: Uuid::new_v4(),
-                    captcha_answer: "answer".to_string(),
                 },
             )
             .await
@@ -388,8 +378,6 @@ mod update_user {
                     last_name: Some("Last".to_string()),
                     username: "username_update_user_with_invalid_first_name".to_string(),
                     password: "kdfkl(#0()$fkLKJF".to_string(),
-                    captcha_token: Uuid::new_v4(),
-                    captcha_answer: "answer".to_string(),
                 },
             )
             .await
@@ -498,8 +486,6 @@ mod update_user {
                     last_name: Some("Last".to_string()),
                     username: "username_update_user_with_invalid_last_name".to_string(),
                     password: "kdfkl(#0()$fkLKJF".to_string(),
-                    captcha_token: Uuid::new_v4(),
-                    captcha_answer: "answer".to_string(),
                 },
             )
             .await
@@ -606,8 +592,6 @@ mod update_user {
                     last_name: Some("Last".to_string()),
                     username: "username_update_user_with_same_data".to_string(),
                     password: "kdfkl(#0()$fkLKJF".to_string(),
-                    captcha_token: Uuid::new_v4(),
-                    captcha_answer: "answer".to_string(),
                 },
             )
             .await
@@ -653,8 +637,6 @@ mod update_user {
                     last_name: Some("Last".to_string()),
                     username: "username_update_user_with_null_first_name".to_string(),
                     password: "kdfkl(#0()$fkLKJF".to_string(),
-                    captcha_token: Uuid::new_v4(),
-                    captcha_answer: "answer".to_string(),
                 },
             )
             .await
@@ -749,8 +731,6 @@ mod update_user {
                     last_name: Some("Last".to_string()),
                     username: "username_update_user_with_refresh_token".to_string(),
                     password: "kdfkl(#0()$fkLKJF".to_string(),
-                    captcha_token: Uuid::new_v4(),
-                    captcha_answer: "answer".to_string(),
                 },
             )
             .await
@@ -801,8 +781,6 @@ mod delete_user {
                     last_name: Some("Last".to_string()),
                     username: "username_delete_user_success".to_string(),
                     password: "kdfkl(#0()$fkLKJF".to_string(),
-                    captcha_token: Uuid::new_v4(),
-                    captcha_answer: "answer".to_string(),
                 },
             )
             .await
@@ -854,8 +832,6 @@ mod delete_user {
                     last_name: Some("Last".to_string()),
                     username: "username_delete_user_with_invalid_password".to_string(),
                     password: "kdfkl(#0()$fkLKJF".to_string(),
-                    captcha_token: Uuid::new_v4(),
-                    captcha_answer: "answer".to_string(),
                 },
             )
             .await
@@ -938,8 +914,6 @@ mod delete_user {
                     last_name: Some("Last".to_string()),
                     username: "username_delete_user_with_refresh_token".to_string(),
                     password: "kdfkl(#0()$fkLKJF".to_string(),
-                    captcha_token: Uuid::new_v4(),
-                    captcha_answer: "answer".to_string(),
                 },
             )
             .await
