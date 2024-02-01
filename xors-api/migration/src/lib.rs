@@ -18,6 +18,7 @@ pub use sea_orm_migration::prelude::*;
 
 mod m20240108_114814_user_table;
 mod m20240119_135153_game;
+mod m20240201_110331_add_start_chat_columns_to_game_table;
 
 pub struct Migrator;
 
@@ -27,6 +28,7 @@ impl MigratorTrait for Migrator {
         vec![
             Box::new(m20240108_114814_user_table::Migration),
             Box::new(m20240119_135153_game::Migration),
+            Box::new(m20240201_110331_add_start_chat_columns_to_game_table::Migration),
         ]
     }
 }

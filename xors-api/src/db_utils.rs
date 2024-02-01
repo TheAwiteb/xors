@@ -215,6 +215,8 @@ pub async fn create_game(
         rounds_result: Set(RoundsResult::default().to_string()),
         x_player: Set(x_player),
         o_player: Set(o_player),
+        x_start_chat: Set(false),
+        o_start_chat: Set(false),
         board: Set(Board::default().to_string()),
         winner: Set(None),
         reason: Set(None),

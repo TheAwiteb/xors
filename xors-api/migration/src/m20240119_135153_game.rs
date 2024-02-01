@@ -58,7 +58,7 @@ impl MigrationTrait for Migration {
 }
 
 #[derive(DeriveIden)]
-enum Game {
+pub enum Game {
     Table,
     Id,
     Uuid,
@@ -67,6 +67,8 @@ enum Game {
     RoundsResult,
     XPlayer,
     OPlayer,
+    XStartChat,
+    OStartChat,
     Board,
     Winner,
     Reason,
