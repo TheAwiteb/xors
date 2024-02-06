@@ -24,6 +24,7 @@ use chrono::Duration;
 use entity::prelude::*;
 use futures_util::{FutureExt, StreamExt};
 use once_cell::sync::Lazy;
+use pgp::{Deserializable, Message as PGPMessage, SignedPublicKey};
 use rand::prelude::SliceRandom;
 use salvo::{prelude::*, websocket::Message};
 use tokio::sync::{mpsc, RwLock};
@@ -113,14 +114,6 @@ pub async fn user_connected(
                             msg.to_str().expect("The message is text"),
                         ) {
                             log::debug!("Received a valid XO event: {event:?}");
-                            println!(
-                                "{}",
-                                serde_json::to_string(&XoClientEvent {
-                                    event: XoClientEventKind::Play,
-                                    data: Some(XoClientEventsData::Play { place: 0 })
-                                })
-                                .unwrap()
-                            );
                             if let Err(err) = handle_event(
                                 event,
                                 &conn,
@@ -169,6 +162,16 @@ async fn handle_event(
         (XoClientEventKind::Play, Some(XoClientEventsData::Play { place })) => {
             play(conn, (user, tx), place, move_period).await?
         }
+        (XoClientEventKind::Wellcome, Some(XoClientEventsData::Wellcome { public_key })) => {
+            wellcome(conn, (user, tx), public_key).await?
+        }
+        (
+            XoClientEventKind::Chat,
+            Some(XoClientEventsData::Chat {
+                encrypted_message,
+                signature,
+            }),
+        ) => chat(conn, (user, tx), encrypted_message, signature).await?,
         _ => {
             tx.send_server_event(XoServerEventData::Error(ErrorData::InvalidBody));
         }
@@ -365,6 +368,128 @@ async fn play(
             game.auto_play_after = Set(game.auto_play_after.unwrap());
             game.save(conn).await?;
         }
+    } else {
+        player
+            .1
+            .send_server_event(XoServerEventData::Error(ErrorData::NotInGame));
+    }
+    Ok(())
+}
+
+/// Wellcome event handler.
+async fn wellcome(
+    conn: &sea_orm::DatabaseConnection,
+    player: Player,
+    public_key: String,
+) -> ApiResult<()> {
+    log::info!("Player {} sent a wellcome event", player.0);
+
+    if let Some((game_uuid, versus_player)) = ONLINE_GAMES.get_user_game(&player.0).await {
+        log::info!("Player {} is in a game", player.0);
+
+        if SignedPublicKey::from_string(&public_key).is_err() {
+            log::error!("Player {} sent an invalid public key", player.0);
+            player
+                .1
+                .send_server_event(XoServerEventData::Error(ErrorData::InvalidPublicKey));
+            return Ok(());
+        }
+
+        let game = db_utils::get_game::<false>(conn, &game_uuid).await?;
+        let (player_symbol, versus_symbol) = if game.x_player == *player.0 {
+            (XoSymbol::X, XoSymbol::O)
+        } else {
+            (XoSymbol::O, XoSymbol::X)
+        };
+        let player = PlayerData::new(player.0, player.1, player_symbol);
+        let versus_player = PlayerData::new(versus_player.0, versus_player.1, versus_symbol);
+
+        if (player.uuid.as_ref() == &game.x_player && game.x_start_chat)
+            || (player.uuid.as_ref() == &game.o_player && game.o_start_chat)
+        {
+            player
+                .tx
+                .send_server_event(XoServerEventData::Error(ErrorData::AlreadyWellcomed));
+            return Ok(());
+        }
+
+        let mut game = game.into_active_model();
+        if game.x_player.as_ref() == player.uuid.as_ref() {
+            game.x_start_chat = Set(true);
+        } else {
+            game.o_start_chat = Set(true);
+        }
+        game.save(conn).await?;
+
+        versus_player
+            .tx
+            .send_server_event(XoServerEventData::Wellcome { public_key });
+    } else {
+        player
+            .1
+            .send_server_event(XoServerEventData::Error(ErrorData::NotInGame));
+    }
+    Ok(())
+}
+
+/// Chat event handler.
+async fn chat(
+    conn: &sea_orm::DatabaseConnection,
+    player: Player,
+    encrypted_message: String,
+    signature: String,
+) -> ApiResult<()> {
+    log::info!("Player {} sent a chat event", player.0);
+
+    if let Some((game_uuid, versus_player)) = ONLINE_GAMES.get_user_game(&player.0).await {
+        log::info!("Player {} is in a game", player.0);
+        if PGPMessage::from_string(&encrypted_message).is_err() {
+            log::error!("Player {} sent an invalid encrypted message", player.0);
+            player
+                .1
+                .send_server_event(XoServerEventData::Error(ErrorData::InvalidChatMessage));
+            return Ok(());
+        }
+
+        if !signature.starts_with("-----BEGIN PGP SIGNED MESSAGE-----")
+            && !signature.ends_with("-----END PGP SIGNATURE-----")
+        {
+            log::error!("Player {} sent an invalid signature", player.0);
+            player
+                .1
+                .send_server_event(XoServerEventData::Error(ErrorData::InvalidChatSignature));
+            return Ok(());
+        }
+
+        let game = db_utils::get_game::<false>(conn, &game_uuid).await?;
+        let (player_symbol, versus_symbol) = if game.x_player == *player.0 {
+            (XoSymbol::X, XoSymbol::O)
+        } else {
+            (XoSymbol::O, XoSymbol::X)
+        };
+        let player = PlayerData::new(player.0, player.1, player_symbol);
+        let versus_player = PlayerData::new(versus_player.0, versus_player.1, versus_symbol);
+
+        if (player.uuid.as_ref() == &game.x_player && !game.x_start_chat)
+            || (player.uuid.as_ref() == &game.o_player && !game.o_start_chat)
+        {
+            player
+                .tx
+                .send_server_event(XoServerEventData::Error(ErrorData::ChatNotAllowed));
+            return Ok(());
+        }
+
+        if !game.x_start_chat || !game.o_start_chat {
+            player
+                .tx
+                .send_server_event(XoServerEventData::Error(ErrorData::ChatNotStarted));
+            return Ok(());
+        }
+
+        versus_player.tx.send_server_event(XoServerEventData::Chat {
+            encrypted_message,
+            signature,
+        });
     } else {
         player
             .1
