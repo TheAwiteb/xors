@@ -2,6 +2,44 @@
 
 Xors API is a REST API for the [xors](https://github.com/TheAwiteb/xors) project.
 
+<details>
+<summary>Table of Contents</summary>
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Database](#database)
+    - [Backup](#backup)
+    - [Restore](#restore)
+- [API](#api)
+    - [OpenAPI](#openapi)
+    - [Development](#development)
+        - [Run the API](#run-the-api)
+        - [Run the CI](#run-the-ci)
+- [Multiplayer WebSocket API](#multiplayer-websocket-api)
+    - [Chat protocol](#chat-protocol)
+    - [Client Events](#client-events)
+        - [`search` event](#search-event)
+        - [`play` event](#play-event)
+        - [`wellcome` event](#wellcome-event)
+        - [`chat` event](#chat-event)
+    - [Server Events](#server-events)
+        - [`game_found` event](#game_found-event)
+        - [`wellcome` event](#wellcome-event-1)
+        - [`chat` event](#chat-event-1)
+        - [`your_turn` event](#your_turn-event)
+        - [`round_start` event](#round_start-event)
+        - [`round_end` event](#round_end-event)
+        - [`play` event](#play-event)
+        - [`auto_play` event](#auto_play-event)
+        - [`game_over` event](#game_over-event)
+        - [`error` event](#error-event)
+        - [Game Over Reasons](#game-over-reasons)
+        - [Errors](#errors)
+- [License](#license)
+
+</details>
+
 ## Features
 - [X] Full documentation using Swagger UI
 - [X] JWT authentication with refresh tokens
@@ -15,7 +53,7 @@ Xors API is a REST API for the [xors](https://github.com/TheAwiteb/xors) project
 - [X] Multiplayer support with websockets
 - [X] Game replay
 - [X] Auto play when the other take too long to play
-- [ ] In-game chat
+- [X] In-game chat
 - [ ] Private games
 - [ ] Friends system (add, remove, block, unblock, invite to game (if online))
 - [ ] [Elo rating system](https://en.wikipedia.org/wiki/Elo_rating_system) (with leaderboard)
@@ -101,18 +139,12 @@ To run the CI, you need to run the following command:
 just ci
 ```
 
-#### Close the database
-To close the database, you need to run the following command:
-```bash
-docker-compose stop db
-```
-
-### Flowchart
-You can find the flowchart of the API at [`flowchart.mermaid`](./flowchart.mermaid) file. And this is how it looks like:
-
-
 ## Multiplayer WebSocket API
 Our WebSocket API is easy to use, and it's based on [JSON](https://www.json.org/json-en.html) messages. The WebSocket API is located at `ws://<HOST>:<POST>/xo/` and it's only available for authenticated users, meaning that you need to send the `Authorization` header with the `Bearer <TOKEN>` value in the [WebSocket handshake request](https://en.wikipedia.org/wiki/WebSocket#Protocol_handshake).
+
+### Chat protocol
+The chat protocol is based on [PGP](https://en.wikipedia.org/wiki/Pretty_Good_Privacy) encryption and signing. The client should send the [`wellcome` event](#wellcome-event) to the server to send the PGP public key to the other player, and after that, the client can send the [`chat` event](#chat-event) to the server to send a message to the other player (Sould reiceve the [`wellcome` event](#wellcome-event-1) from the other player before sending the [`chat` event](#chat-event)). The server will not check the signature, it's only check that the message is a valid PGP message and siginature is a valid PGP signature. Also the server doesn't save anythig about the chat messages, public keys, or signatures. Also the server doesn't save any metadata about the chat messages, it's only relay the messages between the players.
+
 
 ### Client Events
 The client can send the following events to the server:
@@ -142,6 +174,30 @@ The client can send the `play` event to the server to play a move. The event has
 6 | 7 | 8
 ```
 
+#### `wellcome` event
+The client can send the `wellcome` event to the server to send the PGP public key to the other player. The event should be sent after the [game found event](#game_found-event).
+The client can choise to not send the `wellcome` event, but in this case, the other player will not be able to send the `chat` event to the client, so you can make it optional to the client to start chatting or not. The event has the following structure:
+
+```json
+{
+    "event":"wellcome",
+    "data":{"public_key":"<PGP-PUBLIC-KEY>"}
+}
+```
+- `public_key` is the PGP public key.
+
+#### `chat` event
+The client can send the `chat` event to the server to send a message to the other player. The event has the following structure:
+```json
+{
+    "event":"chat",
+    "data":{"encrypted_message":"<PGP-ENCRYPTED-MESSAGE>", "signature":"<PGP-SIGNATURE>"}
+}
+```
+- `message` is the PGP encrypted message by the other player public key of course after receiving it from [wellcome event](#wellcome-event).
+- `signature` is the PGP signature of the hash sha2-256 of the **encrypted message**. You should make sure that the signature is valid using the other player public key the server will not check the signature and it's only check that the signature is a valid PGP signature.
+
+
 ### Server Events
 The server can send the following events to the client:
 
@@ -155,6 +211,17 @@ The server sends the `game_found` event to the client when finding a game for th
 ```
 - `x_player` is the UUID of the player who will play with the `X` symbol.
 - `o_player` is the UUID of the player who will play with the `O` symbol.
+
+#### `wellcome` event
+Resend of the [`wellcome` event](#wellcome-event) from the other player. 
+
+#### `chat` event
+A chat message from the other player, with valid PGP message and signature. The event has the following structure:
+```json
+{
+    "event":"chat",
+    "data":{"encrypted_message":"<PGP-ENCRYPTED-MESSAGE>", "signature":"<PGP-SIGNATURE>"}
+}
 
 #### `your_turn` event
 The `your_turn` event is sent to the client when it's their turn to play. The event has the following structure:
@@ -263,6 +330,12 @@ The error message is sent to the client when an error occurs, and it's sent in t
 | `unknown_event` | The event is unknown | When the event is not client event |
 | `invalid_event_data_for_event` | The event data is invalid for the event | When the event data is invalid for the event |
 | `already_in_search` | The player is already in search | When the player tries to search for a game while they are already in search |
+| `already_wellcomed` | The player is already wellcomed | When the player tries to send the `wellcome` event after sending it before |
+| `chat_not_allowed` | Chat is not allowed | When the player tries to send a chat message before sending the `wellcome` event |
+| `chat_not_started` | Chat is not started | When the player tries to send a chat message before receiving the `wellcome` event |
+| `invalid_public_key` | The public key is invalid | When the player tries to send the `wellcome` event with an invalid PGP public key |
+| `invalid_chat_message` | The chat message is invalid | When the player tries to send a chat message with an invalid PGP message |
+| `invalid_chat_signature` | The chat signature is invalid | When the player tries to send a chat message with an invalid PGP signature |
 | `already_in_game` | The player is already in a game | When the player tries to search for a game while they are already in a game |
 | `not_in_game` | The player is not in a game | When the player tries to play a move while they are not in a game |
 | `not_your_turn` | It's not the player turn | When the player tries to play a move while it's not their turn |
