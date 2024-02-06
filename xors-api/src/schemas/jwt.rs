@@ -33,7 +33,7 @@ pub struct UserSchema {
     pub last_name: Option<String>,
     /// The user's username. It's unique.
     pub username: String,
-    /// The user's profile image path.
+    /// The user's profile image endpoint path.
     pub profile_image_path: String,
     /// The user's wins games.
     pub wins: i64,
@@ -135,7 +135,7 @@ impl Default for UserSchema {
             first_name: "First".to_owned(),
             last_name: Some("Last".to_owned()),
             username: "Username".to_owned(),
-            profile_image_path: utils::get_image_disk_path("default"),
+            profile_image_path: "/profiles/default".to_owned(),
             wins: 0,
             losts: 0,
             draw: 0,
