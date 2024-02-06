@@ -60,3 +60,4 @@ easy-ext = "1.0.1"
 rand = "0.8.5"
 salvo-captcha = { version = "0.1.0", features = ["cacache-storage"] }
 image = { version = "0.24.8", features = ["png"], default-features = false }
+pgp = "0.10.2"
