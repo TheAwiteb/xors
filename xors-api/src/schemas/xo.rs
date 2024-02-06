@@ -40,6 +40,10 @@ mod websocket {
     pub enum XoServerEventKind {
         /// The game found event. Means that the server found a match for the player.
         GameFound,
+        /// The other player wellcome event.
+        Wellcome,
+        /// The chat from the other player.
+        Chat,
         /// The turn event. Means that it's the player's turn.
         YourTurn,
         /// The round start event with the round number of 3 rounds. starting from 1.
@@ -63,6 +67,13 @@ mod websocket {
     pub enum XoServerEventData {
         /// The game found event. Means that the server found a match for the player.
         GameFound { x_player: Uuid, o_player: Uuid },
+        /// The other player wellcome event.
+        Wellcome { public_key: String },
+        /// The chat from the other player.
+        Chat {
+            encrypted_message: String,
+            signature: String,
+        },
         /// The turn event. Means that it's the player's turn.
         YourTurn { auto_play_after: i64 },
         /// The round start event with the round number of 3 rounds. starting from 1.
@@ -97,6 +108,10 @@ mod websocket {
         Search,
         /// The play event. Means that the player want to play.
         Play,
+        /// The player wellcome event, send it's public key to the other player.
+        Wellcome,
+        /// Send a chat message to the other player.
+        Chat,
     }
 
     /// The Xo client events data.
@@ -106,6 +121,13 @@ mod websocket {
     pub enum XoClientEventsData {
         /// The play data.
         Play { place: u8 },
+        /// Wellcome data, Your PGP public key.
+        Wellcome { public_key: String },
+        /// Chat data.
+        Chat {
+            encrypted_message: String,
+            signature: String,
+        },
     }
 
     /// The Xo play data.
@@ -175,6 +197,18 @@ mod websocket {
         InvalidEventDataForEvent,
         /// Already in search. (You can't search for a game while you are in search)
         AlreadyInSearch,
+        /// Already wellcomed. (You can't wellcome the other player while you are already wellcomed)
+        AlreadyWellcomed,
+        /// Chat not allowed. (You can't chat while you didn't wellcome the other player)
+        ChatNotAllowed,
+        /// Chat not started. (You can't chat while the other player didn't wellcome you)
+        ChatNotStarted,
+        /// Invalid public key. (The public key is not valid PGP public key)
+        InvalidPublicKey,
+        /// Invalid chat message. (The chat message is not valid PGP message)
+        InvalidChatMessage,
+        /// Invalid chat signature. (The chat signature is not valid PGP signature)
+        InvalidChatSignature,
         /// Already in game. (You can't search for a game while you are in a game)
         AlreadyInGame,
         /// Not in game. (You can't play while you are not in a game)
@@ -209,6 +243,8 @@ mod websocket {
         pub fn kind(&self) -> XoServerEventKind {
             match self {
                 Self::GameFound { .. } => XoServerEventKind::GameFound,
+                Self::Wellcome { .. } => XoServerEventKind::Wellcome,
+                Self::Chat { .. } => XoServerEventKind::Chat,
                 Self::YourTurn { .. } => XoServerEventKind::YourTurn,
                 Self::RoundStart { .. } => XoServerEventKind::RoundStart,
                 Self::RoundEnd(_) => XoServerEventKind::RoundEnd,
