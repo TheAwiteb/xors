@@ -1,5 +1,5 @@
 // A RESTful tic tac toy API for XORS project
-// Copyright (C) 2024  Awiteb <awitb@hotmail.com>
+// Copyright (C) 2024  Awiteb <Awiteb@pm.me>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published
