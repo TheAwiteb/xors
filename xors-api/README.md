@@ -49,7 +49,7 @@ Xors API is a REST API for the [xors](https://github.com/TheAwiteb/xors) project
 - [X] Username and password validation
 - [X] Ability to change profile image
 - [X] Password reset
-- [ ] Game history
+- [X] Game history
 - [X] Multiplayer support with websockets
 - [X] Game replay
 - [X] Auto play when the other take too long to play
