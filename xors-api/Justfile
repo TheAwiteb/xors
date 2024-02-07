@@ -6,6 +6,7 @@
 # - cargo (For the build and tests) <https://doc.rust-lang.org/cargo/getting-started/installation.html>
 
 set shell := ["/usr/bin/bash", "-c"]
+set dotenv-filename := ".env.dev"
 
 JUST_EXECUTABLE := "just -u -f " + justfile()
 header := "Available tasks:\n"
@@ -19,18 +20,18 @@ _default:
 # Run the API
 run:
     docker-compose up -d db
-    RUST_LOG=debug cargo dotenv -e .env.dev -- run --bin api
+    RUST_LOG=debug cargo run --bin api
 
 # Generate the openapi file
 gen-openapi:
     docker-compose up -d db
-    RUST_LOG=debug cargo dotenv -e .env.dev -- run --bin generate-openapi -- ./openapi.json
+    RUST_LOG=debug cargo run --bin generate-openapi -- ./openapi.json
 
 # Run the CI (Local use only)
 @ci:
-    cargo +stable dotenv -e .env.dev -- build -q
-    cargo +stable dotenv -e .env.dev -- fmt -- --check
-    cargo +stable dotenv -e .env.dev -- clippy -- -D warnings --no-deps
+    cargo +stable build -q
+    cargo +stable fmt -- --check
+    cargo +stable clippy -- -D warnings --no-deps
     {{JUST_EXECUTABLE}} msrv
     {{JUST_EXECUTABLE}} install-tools
     {{JUST_EXECUTABLE}} tests
@@ -39,12 +40,11 @@ gen-openapi:
 msrv:
     @rustup toolchain install {{msrv}}
     echo "Checking MSRV ({{msrv}})"
-    cargo +{{msrv}} dotenv -e .env.dev -- build -q
+    cargo +{{msrv}} build -q
     echo "MSRV is correct"
 
 # Install the required tools
 install-tools:
-    cargo install cargo-dotenv
     cargo install cargo-nextest
 
 # Run the tests
@@ -52,9 +52,9 @@ install-tools:
     docker-compose rm -f -s db
     docker-compose up -d db
     sleep 2
-    cargo dotenv -e .env.dev -- run --manifest-path ./migration/Cargo.toml -- up -u postgres://myuser:mypassword@localhost:8246/xors_api_db
+    cargo run --manifest-path ./migration/Cargo.toml -- up -u postgres://myuser:mypassword@localhost:8246/xors_api_db
 
-    cargo dotenv -e .env.dev -- nextest run --no-fail-fast --test-threads 5
+    cargo nextest run --no-fail-fast --test-threads 5
 
     docker-compose rm -f -s db
 
