@@ -990,8 +990,8 @@
         },
         "example": {
           "captcha_image": "<CAPTCHA_IMAGE_BASE64>",
-          "captcha_token": "0ac14e75-d194-46b7-bb2a-1e472c1678c1",
-          "expired_at": "2024-01-31T17:33:51.542211265"
+          "captcha_token": "0baa854d-f52d-4a25-aa82-9f9fa87923ee",
+          "expired_at": "2024-02-07T20:19:46.564069311"
         }
       },
       "DeleteUserSchema": {
@@ -1066,16 +1066,19 @@
           }
         },
         "example": {
-          "created_at": "2024-01-31T17:33:51.542679355",
+          "created_at": "2024-02-07T20:19:46.564552357",
           "o_player": {
-            "created_at": "2024-01-31T17:33:51.542679239",
+            "created_at": "2024-02-07T20:19:46.564552240",
             "draw": 0,
             "first_name": "First",
             "last_name": "Last",
+            "latest_games": [
+              "66487b83-eb7a-4a03-8459-082e262294aa"
+            ],
             "losts": 0,
-            "profile_image_path": "./profile_images/default",
+            "profile_image_path": "/profiles/default",
             "username": "Username",
-            "uuid": "0b0ff4b9-7c91-469a-97b7-8a0e84e72067",
+            "uuid": "010025da-4c59-49a6-b704-d5e6469d8b1e",
             "wins": 0
           },
           "rounds_results": {
@@ -1084,18 +1087,21 @@
             "o_player": 0,
             "x_player": 0
           },
-          "uuid": "2f6f521d-eda2-4945-b28f-5cd63f248e6c",
+          "uuid": "3619c749-1810-4726-b627-62e744c29e07",
           "winner": null,
           "won_reason": null,
           "x_player": {
-            "created_at": "2024-01-31T17:33:51.542678409",
+            "created_at": "2024-02-07T20:19:46.564551463",
             "draw": 0,
             "first_name": "First",
             "last_name": "Last",
+            "latest_games": [
+              "60d13897-f9d0-4b94-be11-aa4249384e83"
+            ],
             "losts": 0,
-            "profile_image_path": "./profile_images/default",
+            "profile_image_path": "/profiles/default",
             "username": "Username",
-            "uuid": "76d709bf-78ce-45ef-ac87-0cd348130d18",
+            "uuid": "70e4291f-6700-452b-979c-313bdbc8a846",
             "wins": 0
           }
         }
@@ -1295,6 +1301,7 @@
           "wins",
           "losts",
           "draw",
+          "latest_games",
           "created_at"
         ],
         "properties": {
@@ -1317,6 +1324,14 @@
             "description": "The user's last name.",
             "nullable": true
           },
+          "latest_games": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The last 10 games the player has played."
+          },
           "losts": {
             "type": "integer",
             "format": "int64",
@@ -1324,7 +1339,7 @@
           },
           "profile_image_path": {
             "type": "string",
-            "description": "The user's profile image path."
+            "description": "The user's profile image endpoint path."
           },
           "username": {
             "type": "string",
@@ -1342,14 +1357,17 @@
           }
         },
         "example": {
-          "created_at": "2024-01-31T17:33:51.541913209",
+          "created_at": "2024-02-07T20:19:46.563575142",
           "draw": 0,
           "first_name": "First",
           "last_name": "Last",
+          "latest_games": [
+            "b55c406b-b429-4d3c-bf72-21e20c94a923"
+          ],
           "losts": 0,
-          "profile_image_path": "./profile_images/default",
+          "profile_image_path": "/profiles/default",
           "username": "Username",
-          "uuid": "694df944-343a-4e48-8d92-5feadf2eb240",
+          "uuid": "5982a0b2-0c78-479e-baa9-5bb3a501531f",
           "wins": 0
         }
       },
@@ -1378,16 +1396,19 @@
         ],
         "description": "The user's signin schema. It's used to return the user's data and the JWT token.",
         "example": {
-          "created_at": "2024-01-31T17:33:51.541923245",
+          "created_at": "2024-02-07T20:19:46.563586228",
           "draw": 0,
           "first_name": "First",
           "jwt": "<JWT>",
           "last_name": "Last",
+          "latest_games": [
+            "0cbc2e56-7cca-4c85-9108-e3fe115de838"
+          ],
           "losts": 0,
-          "profile_image_path": "./profile_images/default",
+          "profile_image_path": "/profiles/default",
           "refresh_token": "<REFRESH_TOKEN>",
           "username": "Username",
-          "uuid": "ae427805-0706-4537-876d-de4a6b946c09",
+          "uuid": "15ea5c50-1f57-4fe6-862f-35d89397d7c3",
           "wins": 0
         }
       },
