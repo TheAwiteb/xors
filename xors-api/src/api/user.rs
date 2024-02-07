@@ -52,7 +52,10 @@ use std::sync::Arc;
 pub async fn get_me(depot: &mut Depot) -> ApiResult<Json<UserSchema>> {
     let conn = depot.obtain::<Arc<DatabaseConnection>>().unwrap();
     let user = depot.user(conn.as_ref()).await?;
-    Ok(Json(user.into_active_model().into()))
+
+    UserSchema::from_active_model(conn, user.into_active_model())
+        .await
+        .map(Json)
 }
 
 /// Get the user's info.
@@ -76,12 +79,9 @@ pub async fn get_user_info(
     let conn = depot.obtain::<Arc<DatabaseConnection>>().unwrap();
     let requested_user_uuid = uuid.into_inner();
 
-    UserEntity::find()
-        .filter(UserColumn::Uuid.eq(requested_user_uuid))
-        .one(conn.as_ref())
-        .await?
-        .map(|u| Json(u.into_active_model().into()))
-        .ok_or_else(|| ApiError::UserNotFound)
+    UserSchema::from_active_model(conn, db_utils::get_user(conn, requested_user_uuid).await?)
+        .await
+        .map(Json)
 }
 
 /// Delete the user's account.
@@ -175,7 +175,7 @@ pub async fn update_user(
         db_utils::update_profile_image_path(*user.uuid.as_ref(), updated_user.profile_image)?;
     user.profile_image_path = Set(profile_image_path);
     let user = user.save(conn.as_ref()).await?;
-    Ok(Json(user.into()))
+    UserSchema::from_active_model(conn, user).await.map(Json)
 }
 
 /// Reset the user's password.

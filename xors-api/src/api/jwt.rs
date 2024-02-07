@@ -188,9 +188,12 @@ pub async fn signin(
     if let Ok(user) = db_utils::get_user_by_username(conn.as_ref(), signin_schema.username).await {
         if bcrypt::verify(&signin_schema.password, user.password_hash.as_ref()).unwrap_or_default()
         {
-            return db_utils::signin_user(user.into(), secret_key)
-                .await
-                .map(Json);
+            return db_utils::signin_user(
+                UserSchema::from_active_model(conn, user).await?,
+                secret_key,
+            )
+            .await
+            .map(Json);
         }
     }
     Err(ApiError::InvalidSigninCredentials)
@@ -225,9 +228,11 @@ pub async fn refresh(depot: &mut Depot) -> ApiResult<Json<UserSigninSchema>> {
         if !refresh_token.is_expired() {
             if active_after <= chrono::Utc::now().timestamp() {
                 db_utils::signin_user(
-                    db_utils::get_user(conn.as_ref(), refresh_token.uuid)
-                        .await?
-                        .into(),
+                    UserSchema::from_active_model(
+                        conn,
+                        db_utils::get_user(conn.as_ref(), refresh_token.uuid).await?,
+                    )
+                    .await?,
                     secret_key,
                 )
                 .await

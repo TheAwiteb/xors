@@ -58,19 +58,22 @@ pub async fn create_user(
         };
         log::info!("New uuid for user: {}", new_user.username);
 
-        Ok(UserActiveModel {
-            uuid: Set(uuid),
-            first_name: Set(new_user.first_name),
-            last_name: Set(new_user.last_name),
-            profile_image_path: Set("/profiles/default".to_owned()),
-            username: Set(new_user.username),
-            password_hash: Set(password_hash),
-            created_at: Set(chrono::Utc::now().naive_utc()),
-            ..Default::default()
-        }
-        .save(conn)
-        .await?
-        .into())
+        UserSchema::from_active_model(
+            conn,
+            UserActiveModel {
+                uuid: Set(uuid),
+                first_name: Set(new_user.first_name),
+                last_name: Set(new_user.last_name),
+                profile_image_path: Set("/profiles/default".to_owned()),
+                username: Set(new_user.username),
+                password_hash: Set(password_hash),
+                created_at: Set(chrono::Utc::now().naive_utc()),
+                ..Default::default()
+            }
+            .save(conn)
+            .await?,
+        )
+        .await
     }
 }
 
@@ -312,4 +315,22 @@ pub(crate) fn update_profile_image_path(
         "/profiles/default".to_owned()
     };
     Ok(profile_image_path)
+}
+
+pub async fn latest_player_games(
+    conn: &sea_orm::prelude::DatabaseConnection,
+    user_uuid: &Uuid,
+) -> ApiResult<Vec<GameModel>> {
+    GameEntity::find()
+        .filter(
+            GameColumn::XPlayer
+                .eq(*user_uuid)
+                .or(GameColumn::OPlayer.eq(*user_uuid))
+                .and(GameColumn::EndedAt.is_not_null()),
+        )
+        .order_by(GameColumn::CreatedAt, Order::Desc)
+        .limit(10)
+        .all(conn)
+        .await
+        .map_err(ApiError::SeaOrm)
 }

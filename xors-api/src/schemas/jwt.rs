@@ -19,7 +19,7 @@ use salvo::oapi::ToSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::utils;
+use crate::{db_utils, errors::ApiResult};
 
 /// The user's schema. It's used to return the user's data.
 #[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Debug, ToSchema)]
@@ -41,6 +41,8 @@ pub struct UserSchema {
     pub losts: i64,
     /// The user's draw games.
     pub draw: i64,
+    /// The last 10 games the player has played.
+    pub latest_games: Vec<Uuid>,
     /// The user's creation date. Joined date.
     pub created_at: chrono::NaiveDateTime,
 }
@@ -119,12 +121,38 @@ impl UserSchema {
             first_name: "Deleted".to_owned(),
             last_name: Some("Player".to_owned()),
             username: "Deleted".to_owned(),
-            profile_image_path: utils::get_image_disk_path(&nil_uuid.to_string()),
+            profile_image_path: format!("profiles/{nil_uuid}"),
             wins: 0,
             losts: 0,
             draw: 0,
+            latest_games: Vec::new(),
             created_at: chrono::Utc::now().naive_utc(),
         }
+    }
+
+    /// Create new [`UserSchema`] instance from [`UserActiveModel`]
+    pub async fn from_active_model(
+        conn: &sea_orm::DatabaseConnection,
+        user: UserActiveModel,
+    ) -> ApiResult<Self> {
+        let user_uuid = user.uuid.as_ref();
+
+        Ok(Self {
+            uuid: *user_uuid,
+            first_name: user.first_name.unwrap(),
+            last_name: user.last_name.unwrap(),
+            username: user.username.unwrap(),
+            profile_image_path: user.profile_image_path.unwrap(),
+            wins: user.wins.unwrap(),
+            losts: user.losts.unwrap(),
+            draw: user.draw.unwrap(),
+            latest_games: db_utils::latest_player_games(conn, user_uuid)
+                .await?
+                .into_iter()
+                .map(|g| g.uuid)
+                .collect(),
+            created_at: user.created_at.unwrap(),
+        })
     }
 }
 
@@ -139,6 +167,7 @@ impl Default for UserSchema {
             wins: 0,
             losts: 0,
             draw: 0,
+            latest_games: vec![Uuid::new_v4()],
             created_at: chrono::Utc::now().naive_utc(),
         }
     }
@@ -161,22 +190,6 @@ impl Default for UserSigninSchema {
             user: UserSchema::default(),
             jwt: "<JWT>".to_owned(),
             refresh_token: "<REFRESH_TOKEN>".to_owned(),
-        }
-    }
-}
-
-impl From<UserActiveModel> for UserSchema {
-    fn from(user: UserActiveModel) -> Self {
-        Self {
-            uuid: user.uuid.unwrap(),
-            first_name: user.first_name.unwrap(),
-            last_name: user.last_name.unwrap(),
-            username: user.username.unwrap(),
-            profile_image_path: user.profile_image_path.unwrap(),
-            wins: user.wins.unwrap(),
-            losts: user.losts.unwrap(),
-            draw: user.draw.unwrap(),
-            created_at: user.created_at.unwrap(),
         }
     }
 }
