@@ -66,16 +66,11 @@ impl GameSchema {
         game: GameModel,
     ) -> ApiResult<Self> {
         let get_player = |player_uuid| async move {
-            db_utils::get_user(conn, player_uuid)
-                .await
-                .map(UserSchema::from)
-                .or_else(|err| {
-                    if let ApiError::UserNotFound = err {
-                        Ok(UserSchema::deleted_user())
-                    } else {
-                        Err(err)
-                    }
-                })
+            match db_utils::get_user(conn, player_uuid).await {
+                Ok(user) => UserSchema::from_active_model(conn, user).await,
+                Err(ApiError::UserNotFound) => Ok(UserSchema::deleted_user()),
+                Err(err) => Err(err),
+            }
         };
 
         Ok(Self::new(
