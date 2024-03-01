@@ -1,0 +1,35 @@
+.ai .container {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  min-height: 90vh;
+}
+
+.ai .container button {
+  outline: none;
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  color: var(--buff);
+  padding: 0.8rem 3rem;
+  border-radius: 1rem;
+  background-color: var(--cornsilk);
+  cursor: pointer;
+}
+
+@media screen and (min-width: 640px) {
+  .ai .container button {
+    font-size: 1.5rem;
+    padding: 0.9rem 3.5rem;
+  }
+}
+
+@media screen and (min-width: 768px) {
+}
+
+@media screen and (min-width: 1024px) {
+  .ai .container button {
+    font-size: 1.7rem;
+    padding: 1rem 4rem;
+  }
+}
