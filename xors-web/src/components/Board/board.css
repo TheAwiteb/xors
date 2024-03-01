@@ -1,0 +1,87 @@
+.board {
+  border-collapse: collapse;
+  border-spacing: 2px;
+  width: 100%;
+  margin: 5rem;
+}
+
+.board tr td {
+  background: none;
+  height: 30vw;
+  width: 33%;
+  font-size: 0;
+  border: 0.4rem solid var(--papaya);
+  text-align: center;
+  vertical-align: middle;
+  overflow: hidden;
+  cursor: pointer;
+  animation: td 0.5s ease-in-out;
+}
+
+.board tr td svg {
+  width: 5rem;
+}
+
+.board tr td .x {
+  fill: var(--green);
+  animation: td 0.4s ease-in-out;
+}
+
+.board tr td .o {
+  fill: var(--buff);
+  animation: td 0.4s ease-in-out;
+}
+
+.board tr td.winner {
+  background-color: var(--cornsilk);
+}
+
+.board tr td:first-child {
+  border-right: none;
+}
+
+.board tr:first-child td {
+  border-top: none;
+}
+
+.board tr td:last-child {
+  border-left: none;
+}
+
+.board tr:last-child td {
+  border-bottom: none;
+}
+
+@keyframes td {
+  0% {
+    transform: scale(0);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media screen and (min-width: 640px) {
+  .board {
+    width: max-content;
+  }
+  .board tr td {
+    height: 10rem;
+    width: 10rem;
+    border: 0.5rem solid var(--papaya);
+  }
+  .board tr td svg {
+    width: 6rem;
+  }
+}
+
+@media screen and (min-width: 1280px) {
+  .board tr td {
+    height: 12rem;
+    width: 12rem;
+    border: 0.5rem solid var(--papaya);
+  }
+  .board tr td svg {
+    width: 7rem;
+  }
+}

@@ -1,0 +1,138 @@
+@import url("https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap");
+
+/* Start Global Rules */
+
+* {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  font-family: "Vazirmatn", sans-serif;
+  scroll-behavior: smooth;
+  transition: var(--transition);
+}
+
+:root {
+  --green: #ccd5aeff;
+  --buff: #d4a373ff;
+  --beige: #e9edc9ff;
+  --cornsilk: #fefae0ff;
+  --papaya: #faedcdff;
+  --white: #fff;
+  --black: #000;
+  --padding: 60px;
+  --transition: 0.35s;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #ccc;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--clr);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--color2);
+}
+
+a {
+  display: block;
+  text-decoration: none;
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  padding-left: 15px;
+  padding-right: 15px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.main-title {
+  position: relative;
+  width: 100%;
+  padding: 0 15px;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.main-title h2 {
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: var(--buff);
+  margin: 0;
+}
+
+.main-title p {
+  color: var(--green);
+  margin: 0;
+  margin-top: 0.1rem;
+  line-height: 1.6rem;
+}
+
+@media (min-width: 640px) {
+  .container {
+    width: 630px;
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    width: 750px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    width: 1000px;
+  }
+  .main-title {
+    margin-bottom: 3rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container {
+    width: 1250px;
+  }
+  .main-title h2 {
+    font-size: 1.75rem;
+  }
+  .main-title p {
+    font-size: 1.125rem;
+    margin-top: 0.69rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  .container {
+    width: 1500px;
+  }
+}
+
+/* End Global Rules */
+
+@media screen and (min-width: 640px) {
+}
+
+@media screen and (min-width: 768px) {
+}
+
+@media screen and (min-width: 1024px) {
+}
+
+@media screen and (min-width: 1280px) {
+}
+
+@media screen and (min-width: 1536px) {
+}
